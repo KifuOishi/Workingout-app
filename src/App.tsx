@@ -7,8 +7,15 @@ import { categoryLabel, exerciseLabel } from './exerciseLabels'
 import ExercisePicker from './ExercisePicker'
 import { defaultExercises, exerciseStorageKey, readExercises } from './exercises'
 import type { Category, Exercise } from './exercises'
+import { useRef } from 'react'
+import WorkoutPlanner from './WorkoutPlanner'
+import type { PlannerHandle } from './WorkoutPlanner'
+import type { SetDetail } from './workouts'
+import { workoutVolume } from './workouts'
+import { pages, readPage } from './navigation'
+import type { Page } from './navigation'
 
-type Workout = { id: string; date: string; exercise: string; weight: number; reps: number; sets: number; note: string; category?: Category }
+type Workout = { id: string; date: string; exercise: string; weight: number; reps: number; sets: number; note: string; category?: Category; setDetails?: SetDetail[] }
 const key = 'workingout.records.v1'
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function load(): { records: Workout[]; error: boolean } {
@@ -16,13 +23,18 @@ function load(): { records: Workout[]; error: boolean } {
     const raw = localStorage.getItem(key)
     if (!raw) return { records: [], error: false }
     const data: unknown = JSON.parse(raw)
-    if (!Array.isArray(data) || !data.every((r): r is Workout => r && typeof r.id === 'string' && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && typeof r.exercise === 'string' && typeof r.note === 'string' && Number.isFinite(r.weight) && r.weight >= 0 && Number.isInteger(r.reps) && r.reps > 0 && Number.isInteger(r.sets) && r.sets > 0)) throw new Error()
+    if (!Array.isArray(data) || !data.every((r): r is Workout => r && typeof r.id === 'string' && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && typeof r.exercise === 'string' && typeof r.note === 'string' && Number.isFinite(r.weight) && r.weight >= 0 && Number.isInteger(r.reps) && r.reps > 0 && Number.isInteger(r.sets) && r.sets > 0 && (r.setDetails === undefined || Array.isArray(r.setDetails) && r.setDetails.length === r.sets && r.setDetails.every((set: SetDetail) => set && Number.isFinite(set.weight) && set.weight >= 0 && Number.isInteger(set.reps) && set.reps > 0)))) throw new Error()
     return { records: data, error: false }
   } catch { return { records: [], error: true } }
 }
 
 
 function App() {
+  const [page, setPage] = useState(readPage)
+  const [hasSession, setHasSession] = useState(false)
+  const [showRecordForm, setShowRecordForm] = useState(false)
+  function navigate(next: Page) { window.location.hash = '/' + next; setPage(next); window.scrollTo({ top: 0 }) }
+  useEffect(() => { const update = () => { setPage(readPage()); window.scrollTo({ top: 0 }) }; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update) }, [])
   const [settings, setSettings] = useState(readSettings)
   const { language, unit } = settings
   const t = translator(language)
@@ -61,6 +73,7 @@ function App() {
   const [filter, setFilter] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const planner = useRef<PlannerHandle>(null)
   function save(next: Workout[], message: MessageKey) {
     try { localStorage.setItem(key, JSON.stringify(next)); setRecords(next); setError(null); setNotice(message); return true }
     catch { setError('saveError'); setNotice(null); return false }
@@ -77,19 +90,24 @@ function App() {
   const current = records.filter(r => r.date === today())
   return (
     <div className="app">
-      <header><a className="brand" href="#"><span className="brand-icon" aria-hidden="true">▥</span> LIFT LOG</a><div className="settings"><label>{t('language')}<select value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
+      <header><a className="brand" href="#"><span className="brand-icon" aria-hidden="true">▥</span> LIFT LOG</a><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
+      <nav className="page-nav" aria-label={t('journal')}>{pages.map(item => <a key={item} href={'#/' + item} aria-current={page === item ? 'page' : undefined}>{t(item === 'templates' ? 'templatesNav' : item === 'history' ? 'historyNav' : item)}</a>)}</nav>
       <main>
+        {page === 'home' && <>
         <div className="intro"><span className="eyebrow">{t('journal')}</span><h1>{t('title')}</h1><p>{t('subtitle')}</p></div>
         <section className="stats" aria-label={t('summary')}>
           <div><span>{t('days')}</span><strong>{new Set(records.map(r => r.date)).size}<small>{t('dayUnit')}</small></strong></div>
           <div><span>{t('todaySets')}</span><strong>{number(current.reduce((s, r) => s + r.sets, 0))}<small>{t('sets')}</small></strong></div>
-          <div><span>{t('volume')}</span><strong>{displayWeight(current.reduce((s, r) => s + r.weight * r.reps * r.sets, 0))}<small>{unit}</small></strong></div>
+          <div><span>{t('volume')}</span><strong>{displayWeight(current.reduce((s, r) => s + workoutVolume(r), 0))}<small>{unit}</small></strong></div>
         </section>
+        <div className="home-start panel"><div><span className="eyebrow">LIFT LOG / TODAY</span><h2>{t('noActiveWorkout')}</h2><p>{t('emptyHint')}</p></div><div className="planner-actions">{hasSession ? <button className="primary" onClick={() => navigate('workout')}>{t('continueWorkout')}</button> : <button className="primary" onClick={() => planner.current?.empty()}>{t('startEmpty')}</button>}<button className="secondary" onClick={() => navigate('templates')}>{t('fromTemplate')}</button><button className="text-button" onClick={() => navigate('history')}>{t('history')}</button></div></div>
+        </>}
         {catalogInitial.error && <div role="alert" className="error">{t('catalogError')}</div>}
         {error && <div role="alert" className="error">{t(error)}</div>}
         <p role="status" className="notice">{notice && t(notice)}</p>
-        <div className="workspace">
-          <section className="panel form-panel" id="record-form">
+        <WorkoutPlanner ref={planner} page={page} navigate={navigate} onActiveChange={setHasSession} onAddExercise={addExercise} language={language} unit={unit} t={t} exercises={catalog} records={records} onFinish={items => save([...records, ...items.filter(item => !records.some(record => record.id === item.id))], 'workoutSaved')} />
+        {page === 'history' && <><div className="history-page-heading"><h1>{t('history')}</h1><button className="secondary" onClick={() => setShowRecordForm(!showRecordForm)}>{t('manualRecord')}</button></div><div className="history-workspace">
+          {(showRecordForm || editing) && <section className="panel form-panel" id="record-form">
             <div className="panel-title"><span className="eyebrow">{t('record')}</span><h2>{t(editing ? 'editWorkout' : 'addWorkout')}</h2></div>
             <form onSubmit={submit}>
               <label>{t('date')}<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
@@ -104,18 +122,18 @@ function App() {
               <button className="primary" type="submit">{t(editing ? 'save' : 'addRecord')}</button>
               {editing && <button type="button" className="secondary" onClick={() => { setEditing(null); setNote('') }}>{t('cancelEdit')}</button>}
             </form>
-          </section>
+          </section>}
           <section className="history">
             <div className="history-heading"><div><span className="eyebrow">{t('historyLabel')}</span><h2>{t('history')}</h2></div><span className="count">{number(visible.length)} {t('records')}</span></div>
             <div className="filter"><label htmlFor="filter-date">{t('filter')}</label><input id="filter-date" type="date" value={filter} onChange={e => setFilter(e.target.value)} />{filter && <button className="text-button" onClick={() => setFilter('')}>{t('clear')}</button>}</div>
             {visible.length === 0 ? <div className="empty"><div aria-hidden="true">＋</div><h3>{t(filter ? 'noDay' : 'first')}</h3><p>{t(filter ? 'noDayHint' : 'firstHint')}</p></div> : dates.map(day => {
               const rows = visible.filter(r => r.date === day)
-              return <section className="day" key={day}><div className="day-heading"><h3>{new Date(`${day}T00:00:00`).toLocaleDateString(locales[language], { month: 'long', day: 'numeric', weekday: 'short', year: 'numeric' })}{day === today() && <span className="today">{t('today')}</span>}</h3><span>{rows.reduce((s, r) => s + r.sets, 0)} {t('sets')}</span></div>
-                {rows.map(r => <article className="record" key={r.id}><div className="record-main"><div><h4>{exerciseLabel(r.exercise, language)}<span className="exercise-category">{categoryLabel(r.category ?? catalog.find(e => e.name === r.exercise)?.category ?? 'その他', language)}</span></h4><p className="metrics"><strong>{displayWeight(r.weight)}</strong> {unit} <span>×</span> <strong>{r.reps}</strong> {t('reps')} <span>×</span> <strong>{r.sets}</strong> {t('sets')}</p></div><div className="actions"><button onClick={() => edit(r)} aria-label={`${t('edit')}: ${exerciseLabel(r.exercise, language)}`}>{t('edit')}</button><button onClick={() => setDeleting(r.id)} aria-label={`${t('delete')}: ${exerciseLabel(r.exercise, language)}`}>{t('delete')}</button></div></div>{r.note && <p className="record-note">{r.note}</p>}{deleting === r.id && <div className="delete-confirm"><span>{t('confirmDelete')}</span><button className="danger" onClick={() => { if (save(records.filter(item => item.id !== r.id), 'deleted')) { setDeleting(null); if (editing === r.id) { setEditing(null); setNote('') } } }}>{t('delete')}</button><button onClick={() => setDeleting(null)}>{t('cancel')}</button></div>}</article>)}
+              return <section className="day" key={day}><div className="day-heading"><h3>{new Date(`${day}T00:00:00`).toLocaleDateString(locales[language], { month: 'long', day: 'numeric', weekday: 'short', year: 'numeric' })}{day === today() && <span className="today">{t('today')}</span>}</h3><div className="day-actions"><span>{rows.reduce((s, r) => s + r.sets, 0)} {t('sets')}</span><button className="text-button" onClick={() => planner.current?.repeat(rows)}>{t('repeatDay')}</button></div></div>
+                {rows.map(r => <article className="record" key={r.id}><div className="record-main"><div><h4>{exerciseLabel(r.exercise, language)}<span className="exercise-category">{categoryLabel(r.category ?? catalog.find(e => e.name === r.exercise)?.category ?? 'その他', language)}</span></h4>{r.setDetails ? <div className="history-sets">{r.setDetails.map((set, index) => <p className="metrics" key={index}>{t('set')} {index + 1}: <strong>{displayWeight(set.weight)}</strong> {unit} × <strong>{set.reps}</strong> {t('reps')}</p>)}</div> : <p className="metrics"><strong>{displayWeight(r.weight)}</strong> {unit} <span>×</span> <strong>{r.reps}</strong> {t('reps')} <span>×</span> <strong>{r.sets}</strong> {t('sets')}</p>}</div><div className="actions"><button onClick={() => planner.current?.repeat([r])}>{t('performAgain')}</button><button onClick={() => edit(r)} aria-label={`${t('edit')}: ${exerciseLabel(r.exercise, language)}`}>{t('edit')}</button><button onClick={() => setDeleting(r.id)} aria-label={`${t('delete')}: ${exerciseLabel(r.exercise, language)}`}>{t('delete')}</button></div></div>{r.note && <p className="record-note">{r.note}</p>}{deleting === r.id && <div className="delete-confirm"><span>{t('confirmDelete')}</span><button className="danger" onClick={() => { if (save(records.filter(item => item.id !== r.id), 'deleted')) { setDeleting(null); if (editing === r.id) { setEditing(null); setNote('') } } }}>{t('delete')}</button><button onClick={() => setDeleting(null)}>{t('cancel')}</button></div>}</article>)}
               </section>
             })}
           </section>
-        </div>
+        </div></>}
         <footer>{t('local')}<span>{t('formula')}</span></footer>
       </main>
     </div>

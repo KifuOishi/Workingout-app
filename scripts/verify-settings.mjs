@@ -53,14 +53,14 @@ for (const language of ['en', 'ja', 'es', 'zh']) {
   for (const unit of ['kg', 'lb']) {
     storage.set('workingout.settings.v1', JSON.stringify({ language, unit }))
     assert.deepEqual(readSettings(), { language, unit })
-    const html = renderToStaticMarkup(createElement(App))
+    const html = ['home', 'templates', 'history'].map(page => { globalThis.window = { location: { hash: '#/' + page } }; return renderToStaticMarkup(createElement(App)) }).join('')
     const t = translator(language)
     assert.ok(html.includes(t('title')))
-    assert.ok(html.includes(t('addWorkout')))
+    assert.ok(html.includes(t('templates')))
     assert.ok(html.includes(t('sets')))
     assert.ok(html.includes(categoryLabel(categories[0], language)))
     assert.ok(html.includes(exerciseLabel(legacy.exercise, language)))
-    assert.ok(html.includes('My custom exercise'))
+
     assert.ok(html.includes('My note'))
     const expected = fromKg(legacy.weight, unit).toLocaleString({ en: 'en-US', ja: 'ja-JP', es: 'es-ES', zh: 'zh-CN' }[language], { maximumFractionDigits: 2 })
     assert.ok(html.includes(`<strong>${expected}</strong> ${unit}`))

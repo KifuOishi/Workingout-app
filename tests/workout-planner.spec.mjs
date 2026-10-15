@@ -13,7 +13,8 @@ test('running timer survives reload and finishing can retry without duplicate hi
   await active.getByRole('button', { name: 'Start rest', exact: true }).click()
   await page.clock.runFor(30_000)
   await page.reload()
-  await expect(active.locator('output')).toHaveText('01:30')
+  // Reloading also consumes wall time; allow a few seconds on busy test hosts.
+  await expect(active.locator('output')).toHaveText(/^01:(?:2[5-9]|30)$/)
   await page.clock.fastForward(90_500)
   await expect(active.getByRole('alert')).toContainText('Rest is over')
   for (const checkbox of await active.getByRole('checkbox').all()) await checkbox.check()

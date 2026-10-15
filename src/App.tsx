@@ -1,6 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import './polish.css'
+import Icon from './Icon'
+import WorkoutCalendar from './WorkoutCalendar'
 import { fromKg, toKg, locales, readSettings, translator } from './i18n'
 import type { Language, MessageKey, Unit } from './i18n'
 import { categoryLabel, exerciseLabel } from './exerciseLabels'
@@ -12,7 +15,7 @@ import WorkoutPlanner from './WorkoutPlanner'
 import type { PlannerHandle } from './WorkoutPlanner'
 import type { SetDetail } from './workouts'
 import { workoutVolume } from './workouts'
-import { pages, readPage } from './navigation'
+import { pages, readHistoryDate, readPage } from './navigation'
 import type { Page } from './navigation'
 
 type Workout = { id: string; date: string; exercise: string; weight: number; reps: number; sets: number; note: string; category?: Category; setDetails?: SetDetail[] }
@@ -33,8 +36,9 @@ function App() {
   const [page, setPage] = useState(readPage)
   const [hasSession, setHasSession] = useState(false)
   const [showRecordForm, setShowRecordForm] = useState(false)
-  function navigate(next: Page) { window.location.hash = '/' + next; setPage(next); window.scrollTo({ top: 0 }) }
-  useEffect(() => { const update = () => { setPage(readPage()); window.scrollTo({ top: 0 }) }; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update) }, [])
+  const [filter, setFilter] = useState(readHistoryDate)
+  function navigate(next: Page, selectedDate?: string) { window.location.hash = '/' + next + (next === 'history' && selectedDate ? '?date=' + selectedDate : ''); setPage(next); if (next === 'history') setFilter(selectedDate ?? ''); window.scrollTo({ top: 0 }) }
+  useEffect(() => { const update = () => { setPage(readPage()); setFilter(readHistoryDate()); window.scrollTo({ top: 0 }) }; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update) }, [])
   const [settings, setSettings] = useState(readSettings)
   const { language, unit } = settings
   const t = translator(language)
@@ -70,7 +74,6 @@ function App() {
   const [reps, setReps] = useState('10')
   const [sets, setSets] = useState('3')
   const [note, setNote] = useState('')
-  const [filter, setFilter] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const planner = useRef<PlannerHandle>(null)
@@ -90,18 +93,21 @@ function App() {
   const current = records.filter(r => r.date === today())
   return (
     <div className="app">
-      <header><a className="brand" href="#"><span className="brand-icon" aria-hidden="true">▥</span> LIFT LOG</a><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
-      <nav className="page-nav" aria-label={t('journal')}>{pages.map(item => <a key={item} href={'#/' + item} aria-current={page === item ? 'page' : undefined}>{t(item === 'templates' ? 'templatesNav' : item === 'history' ? 'historyNav' : item)}</a>)}</nav>
+      <header><a className="brand" href="#"><span className="brand-icon"><Icon name="workout" /></span> LIFT LOG</a><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
+      <nav className="page-nav" aria-label={t('journal')}>{pages.map(item => <a key={item} href={'#/' + item} aria-current={page === item ? 'page' : undefined}><Icon name={item} /><span>{t(item === 'templates' ? 'templatesNav' : item === 'history' ? 'historyNav' : item === 'calendar' ? 'calendarNav' : item)}</span></a>)}</nav>
       <main>
-        {page === 'home' && <>
+        {page === 'home' && <div className="home-layout"><div className="home-main">
         <div className="intro"><span className="eyebrow">{t('journal')}</span><h1>{t('title')}</h1><p>{t('subtitle')}</p></div>
         <section className="stats" aria-label={t('summary')}>
           <div><span>{t('days')}</span><strong>{new Set(records.map(r => r.date)).size}<small>{t('dayUnit')}</small></strong></div>
           <div><span>{t('todaySets')}</span><strong>{number(current.reduce((s, r) => s + r.sets, 0))}<small>{t('sets')}</small></strong></div>
           <div><span>{t('volume')}</span><strong>{displayWeight(current.reduce((s, r) => s + workoutVolume(r), 0))}<small>{unit}</small></strong></div>
         </section>
-        <div className="home-start panel"><div><span className="eyebrow">LIFT LOG / TODAY</span><h2>{t('noActiveWorkout')}</h2><p>{t('emptyHint')}</p></div><div className="planner-actions">{hasSession ? <button className="primary" onClick={() => navigate('workout')}>{t('continueWorkout')}</button> : <button className="primary" onClick={() => planner.current?.empty()}>{t('startEmpty')}</button>}<button className="secondary" onClick={() => navigate('templates')}>{t('fromTemplate')}</button><button className="text-button" onClick={() => navigate('history')}>{t('history')}</button></div></div>
-        </>}
+        <div className="home-start panel"><div className="home-art" aria-hidden="true"><div className="art-orbit" /><div className="art-orbit art-orbit-inner" /><Icon name="workout" /><span className="art-dot" /></div><div className="home-start-copy"><span className="eyebrow">LIFT LOG / TODAY</span><h2>{t('noActiveWorkout')}</h2><p>{t('emptyHint')}</p></div><div className="planner-actions">{hasSession ? <button className="primary" onClick={() => navigate('workout')}>{t('continueWorkout')}<Icon name="arrow" /></button> : <button className="primary" onClick={() => planner.current?.empty()}>{t('startEmpty')}<Icon name="arrow" /></button>}<button className="secondary" onClick={() => navigate('templates')}>{t('fromTemplate')}</button><button className="text-button" onClick={() => navigate('history')}>{t('history')}</button></div></div>
+        <div className="home-shortcuts"><button className="shortcut-card" onClick={() => navigate('templates')}><span className="shortcut-icon"><Icon name="templates" /></span><span><strong>{t('templates')}</strong><small>{t('templateHint')}</small></span><Icon name="arrow" /></button><button className="shortcut-card" onClick={() => navigate('history')}><span className="shortcut-icon"><Icon name="history" /></span><span><strong>{t('history')}</strong><small>{t('subtitle')}</small></span><Icon name="arrow" /></button></div>
+        <button className="secondary home-calendar-link" onClick={() => navigate('calendar')}><Icon name="calendar" />{t('calendar')}<Icon name="arrow" /></button>
+        </div><aside className="home-calendar-sidebar"><WorkoutCalendar records={records} language={language} t={t} onSelect={date => navigate('history', date)} /></aside></div>}
+        {page === 'calendar' && <div className="calendar-page"><WorkoutCalendar records={records} language={language} t={t} onSelect={date => navigate('history', date)} /></div>}
         {catalogInitial.error && <div role="alert" className="error">{t('catalogError')}</div>}
         {error && <div role="alert" className="error">{t(error)}</div>}
         <p role="status" className="notice">{notice && t(notice)}</p>
@@ -113,9 +119,9 @@ function App() {
               <label>{t('date')}<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
               <ExercisePicker category={category} exercise={exercise} exercises={catalog} language={language} t={t} onChange={(part, name) => { setCategory(part); setExercise(name) }} onAdd={addExercise} />
               <div className="number-fields">
-                <label>{t('weight')} ({unit})<input type="number" min="0" step="any" required value={weightKg === null ? '' : +fromKg(weightKg, unit).toFixed(6)} onChange={e => setWeightKg(e.target.value === '' ? null : toKg(+e.target.value, unit))} /></label>
-                <label>{t('reps')}<input type="number" min="1" max="10000" step="1" required value={reps} onChange={e => setReps(e.target.value)} /></label>
-                <label>{t('sets')}<input type="number" min="1" max="1000" step="1" required value={sets} onChange={e => setSets(e.target.value)} /></label>
+                <label>{t('weight')} ({unit})<input type="number" min="0" step="any" inputMode="decimal" required value={weightKg === null ? '' : +fromKg(weightKg, unit).toFixed(6)} onChange={e => setWeightKg(e.target.value === '' ? null : toKg(+e.target.value, unit))} /></label>
+                <label>{t('reps')}<input type="number" min="1" max="10000" step="1" inputMode="numeric" required value={reps} onChange={e => setReps(e.target.value)} /></label>
+                <label>{t('sets')}<input type="number" min="1" max="1000" step="1" inputMode="numeric" required value={sets} onChange={e => setSets(e.target.value)} /></label>
               </div>
               <p className="hint">{t('bodyweight')} ({unit}).</p>
               <label>{t('note')} <span className="optional">{t('optional')}</span><textarea rows={3} maxLength={500} value={note} onChange={e => setNote(e.target.value)} placeholder={t('notePlaceholder')} /></label>
@@ -125,7 +131,8 @@ function App() {
           </section>}
           <section className="history">
             <div className="history-heading"><div><span className="eyebrow">{t('historyLabel')}</span><h2>{t('history')}</h2></div><span className="count">{number(visible.length)} {t('records')}</span></div>
-            <div className="filter"><label htmlFor="filter-date">{t('filter')}</label><input id="filter-date" type="date" value={filter} onChange={e => setFilter(e.target.value)} />{filter && <button className="text-button" onClick={() => setFilter('')}>{t('clear')}</button>}</div>
+            <details className="history-calendar"><summary>{t('calendar')}</summary><WorkoutCalendar records={records} language={language} t={t} key={filter.slice(0, 7)} selected={filter} onSelect={date => navigate('history', date)} /></details>
+            <div className="filter"><label htmlFor="filter-date">{t('filter')}</label><input id="filter-date" type="date" value={filter} onChange={e => navigate('history', e.target.value)} />{filter && <button className="text-button" onClick={() => navigate('history')}>{t('clear')}</button>}</div>
             {visible.length === 0 ? <div className="empty"><div aria-hidden="true">＋</div><h3>{t(filter ? 'noDay' : 'first')}</h3><p>{t(filter ? 'noDayHint' : 'firstHint')}</p></div> : dates.map(day => {
               const rows = visible.filter(r => r.date === day)
               return <section className="day" key={day}><div className="day-heading"><h3>{new Date(`${day}T00:00:00`).toLocaleDateString(locales[language], { month: 'long', day: 'numeric', weekday: 'short', year: 'numeric' })}{day === today() && <span className="today">{t('today')}</span>}</h3><div className="day-actions"><span>{rows.reduce((s, r) => s + r.sets, 0)} {t('sets')}</span><button className="text-button" onClick={() => planner.current?.repeat(rows)}>{t('repeatDay')}</button></div></div>

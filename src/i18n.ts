@@ -2,6 +2,14 @@ export type Language = 'en' | 'ja' | 'es' | 'zh'
 export type Unit = 'kg' | 'lb'
 export const locales = { en: 'en-US', ja: 'ja-JP', es: 'es-ES', zh: 'zh-CN' }
 export const messages = {
+  calendarNav: ['Calendar', 'カレンダー', 'Calendario', '日历'],
+  calendar: ['Training calendar', 'トレーニングカレンダー', 'Calendario de entrenamiento', '训练日历'],
+  calendarHint: ['Tap a training day to revisit your workout.', '記録がある日をタップして、その日の履歴を確認できます。', 'Toca un día de entrenamiento para ver su historial.', '点击训练日期，查看当天的记录。'],
+  previousMonth: ['Previous month', '前の月', 'Mes anterior', '上个月'],
+  nextMonth: ['Next month', '次の月', 'Mes siguiente', '下个月'],
+  chooseMonth: ['Choose month', '月を選択', 'Elegir mes', '选择月份'],
+  recordedDay: ['Trained', 'トレーニングした日', 'Día entrenado', '训练日'],
+  noMonthWorkouts: ['No workouts recorded this month yet.', 'この月のトレーニング記録はまだありません。', 'Aún no hay entrenamientos registrados este mes.', '本月暂无训练记录。'],
   home: ['Home', 'ホーム', 'Inicio', '首页'],
   workout: ['Workout', 'ワークアウト', 'Entrenamiento', '训练'],
   templatesNav: ['Templates', 'テンプレート', 'Plantillas', '模板'],

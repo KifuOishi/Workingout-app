@@ -1,6 +1,13 @@
-export type Page = 'home' | 'workout' | 'templates' | 'history'
-export const pages: Page[] = ['home', 'workout', 'templates', 'history']
+export type Page = 'home' | 'workout' | 'templates' | 'calendar' | 'history'
+export const pages: Page[] = ['home', 'workout', 'templates', 'calendar', 'history']
 export function readPage(): Page {
-  const hash = typeof window === 'undefined' ? '' : window.location.hash.slice(2)
+  const hash = typeof window === 'undefined' ? '' : window.location.hash.slice(2).split('?')[0]
   return pages.includes(hash as Page) ? hash as Page : 'home'
+}
+export function readHistoryDate(): string {
+  if (typeof window === 'undefined' || readPage() !== 'history') return ''
+  const date = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('date') ?? ''
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return ''
+  const parsed = new Date(`${date}T00:00:00`)
+  return Number.isFinite(parsed.getTime()) && `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}` === date ? date : ''
 }

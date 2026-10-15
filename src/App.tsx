@@ -1,10 +1,12 @@
 ﻿import { useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import ExercisePicker from './ExercisePicker'
+import { defaultExercises, exerciseStorageKey, readExercises } from './exercises'
+import type { Category, Exercise } from './exercises'
 
-type Workout = { id: string; date: string; exercise: string; weight: number; reps: number; sets: number; note: string }
+type Workout = { id: string; date: string; exercise: string; weight: number; reps: number; sets: number; note: string; category?: Category }
 const key = 'workingout.records.v1'
-const exercises = ['ベンチプレス', 'スクワット', 'デッドリフト', 'ショルダープレス', 'ラットプルダウン', 'ダンベルカール', '腕立て伏せ', '懸垂']
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function load(): { records: Workout[]; error: string } {
   try {
@@ -23,7 +25,20 @@ function App() {
   const [error, setError] = useState(initial.error)
   const [notice, setNotice] = useState('')
   const [date, setDate] = useState(today)
-  const [exercise, setExercise] = useState(exercises[0])
+  const [catalogInitial] = useState(readExercises)
+  const [customExercises, setCustomExercises] = useState<Exercise[]>(catalogInitial.exercises)
+  const [category, setCategory] = useState<Category>('胸')
+  const [exercise, setExercise] = useState('ベンチプレス')
+  const catalog = [...defaultExercises, ...customExercises].filter((item, index, all) => all.findIndex(e => e.category === item.category && e.name === item.name) === index)
+  function addExercise(part: Category, name: string): string | null {
+    if (!name || name.length > 80) return '種目名を1〜80文字で入力してください。'
+    if (catalog.some(e => e.category === part && e.name.normalize('NFKC').toLocaleLowerCase() === name.normalize('NFKC').toLocaleLowerCase())) return 'この部位には同じ名前の種目が登録されています。'
+    const next = [...customExercises, { category: part, name }]
+    try { localStorage.setItem(exerciseStorageKey, JSON.stringify(next)) }
+    catch { return '種目を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。' }
+    setCustomExercises(next); setCategory(part); setExercise(name); setNotice(`「${part}」に「${name}」を追加しました。`)
+    return null
+  }
   const [weight, setWeight] = useState('20')
   const [reps, setReps] = useState('10')
   const [sets, setSets] = useState('3')
@@ -38,10 +53,10 @@ function App() {
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!exercise.trim() || !date || !Number.isFinite(+weight) || +weight < 0 || !Number.isInteger(+reps) || +reps < 1 || !Number.isInteger(+sets) || +sets < 1) { setError('種目と日付、正しい重量・回数・セット数を入力してください。'); return }
-    const record: Workout = { id: editing ?? crypto.randomUUID(), date, exercise: exercise.trim(), weight: +weight, reps: +reps, sets: +sets, note: note.trim() }
+    const record: Workout = { id: editing ?? crypto.randomUUID(), date, exercise: exercise.trim(), weight: +weight, reps: +reps, sets: +sets, note: note.trim(), category }
     if (save(editing ? records.map(r => r.id === editing ? record : r) : [...records, record], editing ? '記録を更新しました。' : 'トレーニングを記録しました。')) { setEditing(null); setNote('') }
   }
-  function edit(r: Workout) { setEditing(r.id); setDate(r.date); setExercise(r.exercise); setWeight(String(r.weight)); setReps(String(r.reps)); setSets(String(r.sets)); setNote(r.note); setNotice(''); document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth' }) }
+  function edit(r: Workout) { setEditing(r.id); setDate(r.date); setExercise(r.exercise); setCategory(r.category ?? catalog.find(e => e.name === r.exercise)?.category ?? 'その他'); setWeight(String(r.weight)); setReps(String(r.reps)); setSets(String(r.sets)); setNote(r.note); setNotice(''); document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth' }) }
   const visible = records.filter(r => !filter || r.date === filter).sort((a, b) => b.date.localeCompare(a.date))
   const dates = [...new Set(visible.map(r => r.date))]
   const current = records.filter(r => r.date === today())
@@ -55,6 +70,7 @@ function App() {
           <div><span>今日のセット数</span><strong>{number(current.reduce((s, r) => s + r.sets, 0))}<small>セット</small></strong></div>
           <div><span>今日の総負荷量</span><strong>{number(current.reduce((s, r) => s + r.weight * r.reps * r.sets, 0))}<small>kg</small></strong></div>
         </section>
+        {catalogInitial.error && <div role="alert" className="error">{catalogInitial.error}</div>}
         {error && <div role="alert" className="error">{error}</div>}
         <p role="status" className="notice">{notice}</p>
         <div className="workspace">
@@ -62,8 +78,7 @@ function App() {
             <div className="panel-title"><span className="eyebrow">RECORD</span><h2>{editing ? '記録を編集' : 'トレーニングを追加'}</h2></div>
             <form onSubmit={submit}>
               <label>日付<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
-              <label>種目<input list="exercises" maxLength={80} required value={exercise} onChange={e => setExercise(e.target.value)} placeholder="種目を選択、または入力" /></label>
-              <datalist id="exercises">{exercises.map(name => <option key={name} value={name} />)}</datalist>
+              <ExercisePicker category={category} exercise={exercise} exercises={catalog} onChange={(part, name) => { setCategory(part); setExercise(name) }} onAdd={addExercise} />
               <div className="number-fields">
                 <label>重量 (kg)<input type="number" min="0" max="10000" step="0.1" required value={weight} onChange={e => setWeight(e.target.value)} /></label>
                 <label>回数<input type="number" min="1" max="10000" step="1" required value={reps} onChange={e => setReps(e.target.value)} /></label>

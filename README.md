@@ -1,94 +1,100 @@
-﻿# Workingout App
+﻿# LIFT LOG
 
-React + TypeScript + Vite のアプリです。
+A workout tracking app built with React, TypeScript, and Vite.
 
-## 開発を始める
+## Getting started
 
 ```powershell
 npm.cmd install
 npm.cmd run dev
 ```
 
-表示されたローカルURLをブラウザで開いてください。
-PowerShellの実行ポリシーで npm が制限される環境では、npm.cmd を使用します。
+Open the local URL shown in the terminal in your browser.
+Use `npm.cmd` if PowerShell execution policies block `npm`. On other shells, you can use `npm` instead.
 
-## コマンド
+## Commands
 
-- `npm.cmd run dev`: 開発サーバーを起動
-- `npm.cmd run build`: 型チェックと本番ビルド（dist に出力）
-- `npm.cmd run lint`: コードの静的解析
-- `npm.cmd run preview`: 本番ビルドをローカルで確認
+- `npm.cmd run dev`: Start the development server.
+- `npm.cmd run build`: Run TypeScript checks and build the app into `dist`.
+- `npm.cmd run lint`: Run static code analysis.
+- `npm.cmd run preview`: Preview the production build locally.
+- `npm.cmd test`: Check translations, settings, unit conversions, and rendering across four languages and two weight units, including existing records.
+- `npm.cmd run test:e2e`: Run browser tests with Playwright. Google Chrome must be installed.
 
-## 主なファイル
+## Main files
 
-- `src/App.tsx`: メイン画面
-- `src/App.css`: メイン画面のスタイル
-- `src/index.css`: 全体のスタイル
-- `src/main.tsx`: エントリーポイント
-- `vite.config.ts`: Vite の設定
+- `src/App.tsx`: App layout, navigation, settings, and workout history.
+- `src/App.css`: Base component styles.
+- `src/polish.css`: Visual design and responsive layouts.
+- `src/index.css`: Global styles.
+- `src/main.tsx`: App entry point.
+- `src/WorkoutPlanner.tsx`: Templates, active workouts, and rest timers.
+- `src/WorkoutCalendar.tsx`: Calendar and links to daily history.
+- `src/workouts.ts`: Workout data, storage, and session helpers.
+- `src/exercises.ts`: Exercise catalog and custom exercise storage.
+- `src/exerciseLabels.ts`: Translated exercise and muscle group names.
+- `src/i18n.ts`: Translations, language settings, and unit conversions.
+- `src/navigation.ts`: Page routes and history date filters.
+- `vite.config.ts`: Vite configuration.
 
-## 筋トレ記録の機能
+## Features
 
-- 日付・種目・重量・回数・セット数・メモを登録
-- 種目の候補選択、自由入力、自重トレーニング（0 kg）に対応
-- 記録の編集、確認後の削除、日付による絞り込み
-- トレーニング日数、今日のセット数・総負荷量を集計
-- スマホ向けのレイアウト
+- Record dates, exercises, weights, reps, sets, and notes.
+- Choose from 48 preset exercises organized by muscle group, or save custom exercises.
+- Use a weight of 0 for bodyweight exercises.
+- Edit records, confirm deletions, and filter history by date.
+- View training days, today's completed sets, and total training volume.
+- Track individual sets and compare them with previous results.
+- Create workout templates or start an empty workout.
+- Use a responsive layout with touch-friendly controls.
 
-記録は同じブラウザ・同じアクセス先の localStorage に保存されます。
-別の端末への同期はありません。ブラウザのサイトデータを削除すると記録も削除されます。
+Records are stored in `localStorage` for the current browser and site address. There is no synchronization between devices. Clearing the browser's site data also removes saved records.
 
-## 言語・重量単位
+## Languages and weight units
 
-画面上部で English（初期値）・日本語・Español・中文（簡体字）を選択できます。
-画面の文言、部位名、標準48種目、日付・数値の表示が切り替わります。
-自分で追加した種目名やメモは、入力した内容をそのまま表示します。
+Use the header controls to select English (default), Japanese, Spanish, or Simplified Chinese. Interface text, muscle groups, the 48 preset exercises, dates, and number formatting follow the selected language. Custom exercise names and notes remain as entered.
 
-重量単位は kg（初期値）と lb から選択できます。入力欄・履歴・総負荷量に反映されます。
-記録は内部では kg で保存し、1 lb = 0.45359237 kg として換算します。
-既存の記録も kg として読み込むため、そのまま利用できます。
-言語・単位の設定はこのブラウザに保存されます。
+Choose kg (default) or lb for weight inputs, history, and training volume. Weights are stored internally in kg and converted using `1 lb = 0.45359237 kg`. Existing records are read as kg and remain compatible.
 
-`npm.cmd test` で翻訳、設定の読み込み、単位換算、既存記録を含む4言語×2単位の描画を確認できます。
+Language and unit preferences are saved in the current browser.
 
-## テンプレートとワークアウト
+## Pages
 
-画面上部のナビゲーションから4つのページへ移動できます。
+- **Home** (`#/home`): Training summaries and actions to start or resume a workout. Wide screens also show the calendar on the right.
+- **Workout** (`#/workout`): Active workout, individual sets, and rest timer.
+- **Templates** (`#/templates`): Create, edit, delete, and start workout templates.
+- **Calendar** (`#/calendar`): A dedicated training calendar, also used on mobile and narrow screens.
+- **History** (`#/history`): Review records and repeat previous workouts. Select **Add a past record** to open the manual entry form.
 
-- Home：集計とワークアウトの開始・再開
-- Workout：実施中のセット記録・休憩タイマー
-- Templates：テンプレートの作成・編集・開始
-- History：履歴の確認・再実施。過去の記録の手入力は「Add a past record」から開きます。
+On mobile, use the bottom navigation to switch pages. The layout accounts for the bottom safe area and provides touch-friendly inputs and completion controls. Progress and remaining rest time stay visible while scrolling through an active workout.
 
-「Start empty workout」で種目がない状態から開始できます。
-実施画面の「＋ Add exercise」で部位・種目を選び、「Add to workout」で追加します。
-自作の種目の登録にも対応しています。追加時は1セットが用意され、重量・回数の変更やセット追加ができます。
-ページを移動しても実施中の内容とタイマーは維持されます。空のままでは履歴へ保存されません。
-各ページのURLは `#/home`、`#/workout`、`#/templates`、`#/history` です。
+Browser tests check for horizontal overflow at widths of 320, 390, 768, and 1440 pixels across all four languages.
 
-スマホでは下部のアイコン付きナビゲーションからページを移動します。
-画面下部のセーフエリアに対応し、入力欄と完了チェックはタッチで操作しやすいサイズにしています。
-実施中はスクロールしても進捗と残り休憩時間を上部で確認できます。
-320・390・768・1440px幅と4言語で横にはみ出さないことをブラウザテストで確認しています。
+## Starting an empty workout
 
-## トレーニングカレンダー
+Select **Start empty workout** to begin without predefined exercises. In the workout screen, select **+ Add exercise**, choose a muscle group and exercise, then select **Add to workout**.
 
-PCの広い画面ではホームの右側に月ごとのカレンダーを表示し、記録がある日にチェック印を付けます。
-スマホや狭い画面ではホームにカレンダーを並べず、ナビゲーションの「Calendar」から専用ページ（`#/calendar`）を開きます。
-印がある日を押すと、その日付で絞り込んだ履歴へ移動します。
-月送り・月の直接選択・今月への移動に対応し、履歴ページでもカレンダーを開けます。
-日付フィルターは `#/history?date=2026-10-15` のようにURLへ保存され、再読み込みやブラウザの「戻る」でも復元されます。
-日付と曜日・月名は選択中の言語で表示します。
+You can also register a custom exercise. Each newly added exercise starts with one set; adjust its weight and reps or add more sets as needed.
 
-- 「Create template」で名前、種目ごとの重量・回数・セット数、休憩時間（秒）を設定し、保存します。編集・削除も可能です。
-- 「Start workout」で今日のメニューを開始します。実施画面は白と淡いグリーンを基調に、各セットを独立したカードとして表示します。カードには前回値・重量・回数・完了チェック・休憩設定があります。
-- セットごとに実際の重量・回数を入力し、終わったセットにチェックを入れます。チェックを外すと再編集できます。
-- 各セットをチェックするとその行の休憩時間でタイマーが自動開始します。「Start rest」で手動開始もできます。0秒に設定すると自動開始しません。
-- セットを追加・削除できます。チェック済みのセットは、チェックを外してから削除してください。
-- タイマーは一時停止・再開・リセットに対応します。設定例：120秒で2分間。
-- 終了時は画面と音でお知らせします。「Enable notifications」で許可した場合はブラウザ通知も使います。ページを閉じた場合は通知しません。端末のスリープやブラウザの制限によって通知が遅れることがあります。
-- 全セットにチェックを入れ、「Finish & save to history」で実際のセットごとの値を履歴へ保存します。開始しただけでは履歴に追加されません。総負荷量は各セットの重量×回数の合計です。
-- 履歴の「Perform again」で1種目、「Repeat this day」でその日の内容を再実施できます。実施中の場合は置き換え前に確認します。
-- テンプレート、実施中の進捗、休憩の終了時刻はブラウザに保存します。
+Workout progress and the timer are preserved when switching pages or reloading. An empty workout cannot be saved to history.
 
-`npm.cmd run test:e2e` でChromeを使ったブラウザテストを実行します（Chromeのインストールが必要です）。
+## Templates and set tracking
+
+- Select **Create template** to enter a name, exercise weights, reps, set counts, and a rest interval in seconds. Saved templates can be edited or deleted.
+- Select **Start workout** to begin a template. Each set appears as a separate card with previous results, weight, reps, completion status, and rest settings.
+- Enter the actual weight and reps for each set, then check it off when complete. Uncheck a set to edit it again.
+- Checking a set automatically starts its configured rest interval. Select **Start rest** to start a timer manually. Set an interval to 0 to disable automatic rest for that set.
+- Add or remove sets as needed. Uncheck completed sets before deleting them.
+- Pause, resume, or reset the timer. For example, 120 seconds gives a two-minute rest interval.
+- When rest ends, the app displays an alert and plays a sound when supported by the browser. Select **Enable notifications** and grant permission to receive browser notifications. The page must remain open; device sleep and browser restrictions can delay alerts.
+- Once every set is checked, select **Finish & save to history** to save the actual results. Starting a workout alone does not create history records. Total volume is the sum of weight multiplied by reps for every completed set.
+- In history, select **Perform again** to repeat an exercise or **Repeat this day** to repeat that day's exercises. The app asks before replacing a workout already in progress.
+- Templates, workout progress, and timer deadlines are saved in the browser.
+
+## Training calendar
+
+On wide desktop screens, the monthly calendar appears on the right side of Home. On mobile and narrow screens, open the dedicated **Calendar** page from the navigation.
+
+Days with saved records have a check mark. Select a marked day to open history filtered to that date. You can move between months, choose a month directly, or return to the current month. The calendar can also be opened within History.
+
+Date filters are stored in the URL, for example `#/history?date=2026-10-15`, so they survive reloads and browser back navigation. Dates, weekdays, and month names follow the selected language.

@@ -5,7 +5,7 @@ import { categories } from './exercises'
 import { categoryLabel, exerciseLabel } from './exerciseLabels'
 import { fromKg, locales, toKg } from './i18n'
 import type { Language, MessageKey, Translate, Unit } from './i18n'
-import { completedRecords, plannerKey, readPlanner, remainingTime, startSession, validTemplate } from './workouts'
+import { completedRecords, plannerKey, readPlanner, remainingTime, startSession, validTemplate, previousWorkout } from './workouts'
 import type { PlanItem, PlannerState, SessionSet, Template } from './workouts'
 import ExercisePicker from './ExercisePicker'
 import type { Category } from './exercises'
@@ -176,13 +176,13 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
       {addingExercise && <form className="session-add-form panel" onSubmit={addToSession}><h3>{t('addPlanItem')}</h3><ExercisePicker category={addCategory} exercise={addExercise} exercises={exercises} language={language} t={t} onChange={(category, name) => { setAddCategory(category); setAddExercise(name) }} onAdd={(category, name) => { const result = onAddExercise(category, name); if (!result) { setAddCategory(category); setAddExercise(name) } return result }} /><div className="planner-actions"><button type="submit" className="primary">{t('sessionAdd')}</button><button type="button" className="text-button" onClick={() => setAddingExercise(false)}>{t('cancel')}</button></div></form>}
       {session.items.length === 0 && <div className="empty session-empty"><h3>{t('addFirstExercise')}</h3><p>{t('emptyHint')}</p></div>}
       <div className="session-layout"><div className="set-exercises">{session.items.map(item => {
-        const previous = [...records].reverse().filter(record => record.exercise === item.exercise).sort((a, b) => b.date.localeCompare(a.date))[0]
+        const previous = previousWorkout(records, item, session)
         const rows = session.setRows[item.id]
         return <section className="live-exercise" key={item.id}><div className="exercise-heading"><h3>{exerciseLabel(item.exercise, language)}</h3><span className="count">{rows.filter(row => row.done).length} / {rows.length}</span></div>
           {rows.map((row, index) => {
             const prev = previous?.setDetails ? previous.setDetails[index] : previous && index < previous.sets ? previous : undefined
             return <div className={row.done ? 'set-entry set-complete' : 'set-entry'} key={row.id}>
-              <div className="set-card-heading"><div className="set-card-title"><span className="set-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{t('set')} {index + 1}</strong><p className="previous-summary">{t('previous')}: <span className="previous-set">{prev ? num(fromKg(prev.weight, unit)) + ' ' + unit + ' × ' + prev.reps : '—'}</span></p></div></div>
+              <div className="set-card-heading"><div className="set-card-title"><span className="set-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{t('set')} {index + 1}</strong><p className="previous-summary"><span>{t('previous')}{previous && <time dateTime={previous.date}> ? {new Date(previous.date + 'T00:00:00').toLocaleDateString(locales[language], { month: 'short', day: 'numeric' })}</time>}</span><span className="previous-set">{prev ? num(fromKg(prev.weight, unit)) + ' ' + unit + ' × ' + prev.reps : '—'}</span></p></div></div>
                 <label className="set-check"><input type="checkbox" aria-label={exerciseLabel(item.exercise, language) + ' ' + t('set') + ' ' + (index + 1)} checked={row.done} disabled={row.weight === null || row.reps === null} onChange={() => toggleSet(item.id, row.id, Date.now())} /><span aria-hidden="true">✓</span></label>
               </div>
               <div className="set-card-fields">

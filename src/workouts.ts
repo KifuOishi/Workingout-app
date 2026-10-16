@@ -40,6 +40,11 @@ function makeSets(item: PlanItem, restSeconds: number, done = false): SessionSet
 export function workoutVolume(item: PlanItem): number {
   return item.setDetails ? item.setDetails.reduce((sum, set) => sum + set.weight * set.reps, 0) : item.weight * item.reps * item.sets
 }
+export function previousWorkout(records: (PlanItem & { date: string })[], item: PlanItem, session: Session) {
+  return [...records].reverse()
+    .filter(record => record.exercise === item.exercise && (!record.category || !item.category || record.category === item.category) && record.date <= session.date && !record.id.startsWith(`session-${session.id}-`))
+    .sort((a, b) => b.date.localeCompare(a.date))[0]
+}
 export function remainingTime(timer: Session['timer'], now: number): number {
   return timer.endAt === null ? timer.remainingMs : Math.max(0, timer.endAt - now)
 }

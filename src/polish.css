@@ -291,3 +291,11 @@ header .brand{margin-right:auto}.backup-trigger{font-size:12px;min-height:44px;w
 .history-reflection { background: #dce8d0; border-radius: 12px; padding: 16px; margin-bottom: 16px; font-size: 13px; }
 .history-reflection p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; margin-top: 10px; }
 .feeling-badge { display: inline-block; margin-left: 10px; background: #c4d8b2; border-radius: 20px; padding: 5px 10px; font-size: 12px; }
+.calendar-month-picker { min-width: 0; }
+.calendar-month-picker input { box-sizing: border-box; min-width: 0; width: 100%; }
+@media(max-width:650px) {
+  .workout-calendar .calendar-controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+  .workout-calendar .calendar-month-title { width: 100%; min-width: 0; }
+  .workout-calendar .calendar-month-picker input { max-width: 100%; min-height: 44px; }
+  .workout-calendar .calendar-arrows { width: 100%; justify-content: flex-end; margin: 0; }
+}

@@ -10,6 +10,7 @@ import type { PlanItem, PlannerState, SessionSet, Template } from './workouts'
 import ExercisePicker from './ExercisePicker'
 import type { Category } from './exercises'
 import type { Page } from './navigation'
+import { disablePush, enablePush, PushError, pushEnabled, syncRestPush } from './push'
 
 export type PlannerHandle = { repeat: (items: PlanItem[]) => void; empty: () => void }
 type Props = { page: Page; navigate: (page: Page) => void; onActiveChange: (active: boolean) => void; onAddExercise: (category: Category, name: string) => MessageKey | null; language: Language; unit: Unit; t: Translate; exercises: Exercise[]; records: (PlanItem & { date: string })[]; onFinish: (records: ReturnType<typeof completedRecords>) => boolean }
@@ -27,13 +28,24 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
   const [addCategory, setAddCategory] = useState<Category>('胸')
   const [addExercise, setAddExercise] = useState('ベンチプレス')
   const [now, setNow] = useState(Date.now)
-  const [alerts, setAlerts] = useState<'idle' | 'enabled' | 'unavailable'>('idle')
+  const [alerts, setAlerts] = useState<'idle' | 'enabled' | 'unavailable'>(() => pushEnabled() ? 'enabled' : 'idle')
+  const [pushProblem, setPushProblem] = useState<MessageKey | null>(null)
+  const [pushDelivery, setPushDelivery] = useState<'pushPending' | 'pushScheduled' | null>(null)
+  const [pushEpoch, setPushEpoch] = useState(0)
   const audio = useRef<AudioContext | null>(null)
   const notified = useRef<number | null>(null)
   const session = state.session
   const sessionId = session?.id
   useEffect(() => { onActiveChange(!!sessionId) }, [sessionId, onActiveChange])
   const timer = session?.timer
+  const restBody = t('restDone')
+  useEffect(() => {
+    if (alerts !== 'enabled' || timer?.ringing || timer?.endAt && timer.endAt <= Date.now()) return
+    let current = true
+    void Promise.resolve().then(() => { if (current) setPushDelivery(timer?.endAt ? 'pushPending' : null) })
+    void syncRestPush(timer?.endAt ?? null, restBody).then(() => { if (current) { setPushProblem(null); setPushDelivery(timer?.endAt ? 'pushScheduled' : null) } }).catch(error => { if (current) { setPushDelivery(null); setPushProblem(error instanceof PushError ? error.code : 'pushFailed') } })
+    return () => { current = false }
+  }, [alerts, timer?.endAt, timer?.ringing, restBody, pushEpoch])
   const num = (n: number) => n.toLocaleString(locales[language], { maximumFractionDigits: 2 })
   const commit = useCallback((next: PlannerState) => {
     try { localStorage.setItem(plannerKey, JSON.stringify(next)); setState(next); setError(null); return true }
@@ -58,7 +70,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
     commit({ ...state, session: { ...session, timer: { endAt: null, remainingMs: 0, ringing: true } } })
     try {
       const ctx = audio.current
-      if (ctx?.state === 'running') {
+      if (ctx?.state === 'running' && (alerts !== 'enabled' || pushProblem)) {
         for (let i = 0; i < 3; i++) {
           const oscillator = ctx.createOscillator(); const gain = ctx.createGain()
           oscillator.connect(gain); gain.connect(ctx.destination); oscillator.frequency.value = 880
@@ -67,9 +79,9 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
           oscillator.start(at); oscillator.stop(at + 0.3)
         }
       }
-      if ('Notification' in window && Notification.permission === 'granted') new Notification('LIFT LOG', { body: t('restDone'), tag: 'lift-log-rest' })
+      if (alerts !== 'enabled' && 'Notification' in window && Notification.permission === 'granted') new Notification('LIFT LOG', { body: t('restDone'), tag: 'lift-log-rest' })
     } catch { /* On-page alert remains available. */ }
-  }, [now, timer, session, state, t, commit])
+  }, [now, timer, session, state, t, commit, alerts, pushProblem])
   function start(plan: Template) {
     armSound()
     navigate('workout')
@@ -122,8 +134,12 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
   }
   async function enableAlerts() {
     armSound()
-    try { setAlerts('Notification' in window && await Notification.requestPermission() === 'granted' ? 'enabled' : 'unavailable') }
-    catch { setAlerts('unavailable') }
+    try { await enablePush(); setAlerts('enabled'); setPushProblem(null); setPushEpoch(value => value + 1) }
+    catch (error) { setAlerts('unavailable'); setPushProblem(error instanceof PushError ? error.code : 'pushFailed') }
+  }
+  async function disableAlerts() {
+    try { await disablePush(); setAlerts('idle'); setPushProblem(null) }
+    catch (error) { setPushProblem(error instanceof PushError ? error.code : 'pushFailed') }
   }
   function finish() {
     if (!session || session.items.length === 0 || !Object.values(session.setRows).every(rows => rows.every(row => row.done))) return
@@ -182,7 +198,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
           {item.note && <p className="hint">{item.note}</p>}
         </section>
       })}</div>
-        <div className={`rest-timer ${timer?.ringing ? 'timer-finished' : ''}`}><label>{t('restInterval')} ({t('seconds')})<input type="number" min="0" max="3600" step="1" inputMode="numeric" value={session.restSeconds} onChange={e => { const value = +e.target.value; if (e.target.value !== '' && Number.isInteger(value) && value >= 0 && value <= 3600) commit({ ...state, session: { ...session, restSeconds: value } }) }} /></label><output className="timer-digits" aria-label={t('restInterval')}>{String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:{String(secondsLeft % 60).padStart(2, '0')}</output>{timer?.ringing && <p role="alert" className="rest-alert">{t('restDone')}</p>}<div className="planner-actions"><button className="primary" disabled={session.restSeconds === 0} onClick={startRest}>{t('startRest')}</button>{timer && (timer.endAt !== null || timer.remainingMs > 0) && <button className="secondary" onClick={() => { armSound(); setNow(Date.now()); notified.current = null; commit({ ...state, session: { ...session, timer: timer.endAt !== null ? { endAt: null, remainingMs: remainingTime(timer, Date.now()), ringing: false } : { endAt: Date.now() + timer.remainingMs, remainingMs: timer.remainingMs, ringing: false } } }) }}>{t(timer.endAt !== null ? 'pause' : 'resume')}</button>}<button className="text-button" onClick={() => commit({ ...state, session: { ...session, timer: { endAt: null, remainingMs: 0, ringing: false } } })}>{t('resetTimer')}</button></div><button className="text-button" onClick={() => void enableAlerts()}>{t(alerts === 'enabled' ? 'alertsEnabled' : 'enableAlerts')}</button>{alerts === 'unavailable' && <p className="hint" role="status">{t('alertsUnavailable')}</p>}<p className="hint">{t('timerHint')}</p></div></div>
+        <div className={`rest-timer ${timer?.ringing ? 'timer-finished' : ''}`}><label>{t('restInterval')} ({t('seconds')})<input type="number" min="0" max="3600" step="1" inputMode="numeric" value={session.restSeconds} onChange={e => { const value = +e.target.value; if (e.target.value !== '' && Number.isInteger(value) && value >= 0 && value <= 3600) commit({ ...state, session: { ...session, restSeconds: value } }) }} /></label><output className="timer-digits" aria-label={t('restInterval')}>{String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:{String(secondsLeft % 60).padStart(2, '0')}</output>{timer?.ringing && <p role="alert" className="rest-alert">{t('restDone')}</p>}<div className="planner-actions"><button className="primary" disabled={session.restSeconds === 0} onClick={startRest}>{t('startRest')}</button>{timer && (timer.endAt !== null || timer.remainingMs > 0) && <button className="secondary" onClick={() => { armSound(); setNow(Date.now()); notified.current = null; commit({ ...state, session: { ...session, timer: timer.endAt !== null ? { endAt: null, remainingMs: remainingTime(timer, Date.now()), ringing: false } : { endAt: Date.now() + timer.remainingMs, remainingMs: timer.remainingMs, ringing: false } } }) }}>{t(timer.endAt !== null ? 'pause' : 'resume')}</button>}<button className="text-button" onClick={() => commit({ ...state, session: { ...session, timer: { endAt: null, remainingMs: 0, ringing: false } } })}>{t('resetTimer')}</button></div><button className="text-button" onClick={() => void enableAlerts()}>{t(alerts === 'enabled' ? 'alertsEnabled' : 'enableAlerts')}</button>{alerts === 'enabled' && <button className="text-button" onClick={() => void disableAlerts()}>{t('disableAlerts')}</button>}{timer?.endAt && pushDelivery && <p className="push-status" role="status">{t(pushDelivery)}</p>}{pushProblem && <p className="push-status" role="status">{t(pushProblem)}</p>}<p className="hint">{t('pushHelp')}</p>{alerts === 'unavailable' && <p className="hint" role="status">{t('alertsUnavailable')}</p>}{alerts !== 'enabled' && <p className="hint">{t('timerHint')}</p>}</div></div>
       <p className="hint">{t('setRestHelp')}</p><p className="hint">{t('finishSetsHint')}</p><div className="planner-actions"><button className="text-button" onClick={() => setDiscarding(true)}>{t('discardWorkout')}</button></div>{discarding && <div className="planner-confirm"><p>{t('discardConfirm')}</p><button className="secondary" onClick={() => { if (commit({ ...state, session: null })) setDiscarding(false) }}>{t('discardWorkout')}</button><button className="text-button" onClick={() => setDiscarding(false)}>{t('cancel')}</button></div>}
     </section>}
   </section>

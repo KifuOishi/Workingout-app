@@ -50,6 +50,31 @@ Use `npm.cmd` if PowerShell execution policies block `npm`. On other shells, you
 
 Records are stored in `localStorage` for the current browser and site address. There is no synchronization between devices. Clearing the browser's site data also removes saved records.
 
+## Background rest notifications (Netlify Free only)
+
+Web Push support is implemented but requires the owner to configure the published Netlify site first. Follow [the free-plan notification setup guide](docs/notifications.md). Run `npm.cmd run push:keys` once to generate a local, Git-ignored VAPID key file; do not overwrite the existing keys.
+
+No paid service, paid fallback, or automatic billing upgrade is configured. Only enable this feature after checking that your Netlify team is on the hard-capped Free plan. The code cannot inspect your account's billing plan. Shared Free usage limits can pause the whole site.
+
+After setup, use **Enable notifications** inside a workout. iPhone/iPad users must add the app to the Home Screen and open it there. Android users need a compatible browser and notification permission. Wait for **Background alert reserved** before leaving the app.
+
+The free implementation supports rests up to 14 minutes and has fixed daily and monthly reservation limits. Pause, reset, finish, and replacement cancel the old reservation when online. Network loss can prevent cancellation, and delivery can be delayed by the network or device settings. Exercise records remain on the device; only notification routing and timer metadata are sent to Netlify.
+
+Use `npm.cmd run test:push` for local server-logic tests. Actual iPhone/Android delivery must be tested against the configured deployment; local mocks do not verify real push delivery.
+
+## Backup and restore
+
+Select **Backup** in the header to manage backups without an account or server.
+
+- **Export backup** downloads a JSON file containing records (including individual set results), templates, custom exercises, language and unit preferences, and any active workout.
+- Keep the downloaded file outside the browser's site storage, such as in your device's files or your own backup folder.
+- **Choose backup file** opens a preview showing the export date and the number of records, templates, custom exercises, and active workouts. Choose **Cancel** to leave your data unchanged.
+- **Replace data & restore** replaces the data currently saved for this site in this browser. Export the current data first if you want to keep it. Restored rest timers are paused; use **Resume** when ready.
+- Invalid or unsupported files are rejected before saving. Files must be no larger than 10 MB. If saving fails, the app attempts to restore the previous saved values and reports the outcome.
+- You can move a backup file to another device or browser, or import a local development backup into the published site. Files are processed locally and are not uploaded to a server.
+
+Backups are created manually. Export one before clearing site data or changing devices; data already deleted without a backup cannot be recovered through this feature.
+
 ## Languages and weight units
 
 Use the header controls to select English (default), Japanese, Spanish, or Simplified Chinese. Interface text, muscle groups, the 48 preset exercises, dates, and number formatting follow the selected language. Custom exercise names and notes remain as entered.

@@ -9,13 +9,13 @@ export type Session = Template & { date: string; startedAt: number; setRows: Rec
 export type PlannerState = { templates: Template[]; session: Session | null }
 export const plannerKey = 'workingout.planner.v1'
 export const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-const validItem = (r: PlanItem) => r && typeof r.id === 'string' && typeof r.exercise === 'string' && r.exercise.trim().length > 0 && Number.isFinite(r.weight) && r.weight >= 0 && Number.isInteger(r.reps) && r.reps > 0 && Number.isInteger(r.sets) && r.sets > 0 && r.sets <= 1000 && typeof r.note === 'string' && (r.category === undefined || categories.includes(r.category)) && (r.setDetails === undefined || Array.isArray(r.setDetails) && r.setDetails.length === r.sets && r.setDetails.every(set => set && Number.isFinite(set.weight) && set.weight >= 0 && Number.isInteger(set.reps) && set.reps > 0))
+export const validItem = (r: PlanItem) => r && typeof r.id === 'string' && typeof r.exercise === 'string' && r.exercise.trim().length > 0 && Number.isFinite(r.weight) && r.weight >= 0 && Number.isInteger(r.reps) && r.reps > 0 && Number.isInteger(r.sets) && r.sets > 0 && r.sets <= 1000 && typeof r.note === 'string' && (r.category === undefined || categories.includes(r.category)) && (r.setDetails === undefined || Array.isArray(r.setDetails) && r.setDetails.length === r.sets && r.setDetails.every(set => set && Number.isFinite(set.weight) && set.weight >= 0 && Number.isInteger(set.reps) && set.reps > 0))
 export function validTemplate(p: Template, allowEmpty = false): boolean {
   return !!p && typeof p.id === 'string' && typeof p.name === 'string' && p.name.trim().length > 0 && Number.isInteger(p.restSeconds) && p.restSeconds >= 0 && p.restSeconds <= 3600 && Array.isArray(p.items) && (allowEmpty || p.items.length > 0) && p.items.every(validItem) && new Set(p.items.map(i => i.id)).size === p.items.length
 }
-export function readPlanner(): { state: PlannerState; error: boolean } {
+export function readPlanner(raw?: string): { state: PlannerState; error: boolean } {
   try {
-    const data = JSON.parse(localStorage.getItem(plannerKey) ?? '{"templates":[],"session":null}')
+    const data = JSON.parse(raw ?? localStorage.getItem(plannerKey) ?? '{"templates":[],"session":null}')
     if (!data || !Array.isArray(data.templates) || !data.templates.every((plan: Template) => validTemplate(plan))) throw new Error()
     if (data.session !== null) {
       const s = data.session

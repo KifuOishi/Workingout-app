@@ -9,11 +9,15 @@
     "lint": "oxlint",
     "test": "node scripts/verify-settings.mjs",
     "test:e2e": "playwright test",
+    "test:push": "node --test scripts/push.test.mjs",
+    "push:keys": "node scripts/generate-push-keys.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.1.4",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

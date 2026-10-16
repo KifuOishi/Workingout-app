@@ -4,6 +4,7 @@ import './App.css'
 import './polish.css'
 import Icon from './Icon'
 import WorkoutCalendar from './WorkoutCalendar'
+import BackupDialog from './BackupDialog'
 import { fromKg, toKg, locales, readSettings, translator } from './i18n'
 import type { Language, MessageKey, Unit } from './i18n'
 import { categoryLabel, exerciseLabel } from './exerciseLabels'
@@ -32,7 +33,8 @@ function load(): { records: Workout[]; error: boolean } {
 }
 
 
-function App() {
+function AppContent({ onRestored, restored }: { onRestored: () => void; restored: boolean }) {
+  const [backupOpen, setBackupOpen] = useState(false)
   const [page, setPage] = useState(readPage)
   const [hasSession, setHasSession] = useState(false)
   const [showRecordForm, setShowRecordForm] = useState(false)
@@ -53,7 +55,7 @@ function App() {
   const [initial] = useState(load)
   const [records, setRecords] = useState<Workout[]>(initial.records)
   const [error, setError] = useState<MessageKey | null>(initial.error ? 'loadError' : null)
-  const [notice, setNotice] = useState<MessageKey | null>(null)
+  const [notice, setNotice] = useState<MessageKey | null>(restored ? 'backupRestored' : null)
   const [date, setDate] = useState(today)
   const [catalogInitial] = useState(readExercises)
   const [customExercises, setCustomExercises] = useState<Exercise[]>(catalogInitial.exercises)
@@ -93,7 +95,8 @@ function App() {
   const current = records.filter(r => r.date === today())
   return (
     <div className="app">
-      <header><a className="brand" href="#"><span className="brand-icon"><Icon name="workout" /></span> LIFT LOG</a><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
+      {backupOpen && <BackupDialog t={t} language={language} onClose={() => setBackupOpen(false)} onRestored={onRestored} />}
+      <header><a className="brand" href="#"><span className="brand-icon"><Icon name="workout" /></span> LIFT LOG</a><button className="secondary backup-trigger" onClick={() => setBackupOpen(true)}>{t('backup')}</button><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
       <nav className="page-nav" aria-label={t('journal')}>{pages.map(item => <a key={item} href={'#/' + item} aria-current={page === item ? 'page' : undefined}><Icon name={item} /><span>{t(item === 'templates' ? 'templatesNav' : item === 'history' ? 'historyNav' : item === 'calendar' ? 'calendarNav' : item)}</span></a>)}</nav>
       <main>
         {page === 'home' && <div className="home-layout"><div className="home-main">
@@ -145,6 +148,10 @@ function App() {
       </main>
     </div>
   )
+}
+function App() {
+  const [revision, setRevision] = useState(0)
+  return <AppContent key={revision} restored={revision > 0} onRestored={() => setRevision(value => value + 1)} />
 }
 export default App
 

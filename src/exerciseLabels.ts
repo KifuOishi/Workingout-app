@@ -15,6 +15,8 @@ const names = {
 }
 export const categoryLabel = (category: Category, language: Language) => groups[language][categories.indexOf(category)] ?? category
 export function exerciseLabel(name: string, language: Language) {
+  const assisted = name === 'アシストチンニング' ? { en: 'Assisted chin-up', ja: name, es: 'Dominadas asistidas', zh: '辅助引体向上' } : name === 'アシストディップス' ? { en: 'Assisted dip', ja: name, es: 'Fondos asistidos', zh: '辅助双杠臂屈伸' } : null
+  if (assisted) return assisted[language]
   if (language === 'ja') return name
   const index = defaultExercises.findIndex(e => e.name === name)
   return index < 0 ? name : names[language][index] ?? name

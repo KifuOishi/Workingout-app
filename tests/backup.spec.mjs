@@ -4,9 +4,9 @@ import fs from 'node:fs/promises'
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     if (localStorage.getItem('workingout.records.v1')) return
-    const item = { id: 'item-1', exercise: 'Bench press', category: '胸', weight: 50, reps: 8, sets: 2, note: 'Keep this note' }
+    const item = { id: 'item-1', exercise: 'Bench press', category: '胸', weight: 50, reps: 8, sets: 2, note: 'Keep this note', feeling: 'balanced', workoutNote: 'Felt well rested' }
     localStorage.setItem('workingout.records.v1', JSON.stringify([{ ...item, id: 'record-1', date: '2026-10-15', setDetails: [{ weight: 50, reps: 8 }, { weight: 55, reps: 6 }] }]))
-    localStorage.setItem('workingout.exercises.v1', JSON.stringify([{ category: '肩', name: 'My shoulder exercise' }]))
+    localStorage.setItem('workingout.exercises.v1', JSON.stringify([{ category: '肩', name: 'My shoulder exercise', equipment: 'dumbbell' }]))
     localStorage.setItem('workingout.settings.v1', JSON.stringify({ language: 'en', unit: 'lb' }))
     const template = { id: 'template-1', name: 'My strength routine', restSeconds: 120, items: [item] }
     localStorage.setItem('workingout.planner.v1', JSON.stringify({ templates: [template], session: { ...template, id: 'session-1', date: '2026-10-15', startedAt: Date.now() - 60000, completed: [], setRows: { 'item-1': [{ id: 'set-1', weight: 50, reps: 8, done: true, restSeconds: 120 }, { id: 'set-2', weight: 55, reps: 6, done: false, restSeconds: 120 }] }, timer: { endAt: Date.now() + 120000, remainingMs: 120000, ringing: false } } }))

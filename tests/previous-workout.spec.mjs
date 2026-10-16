@@ -21,6 +21,7 @@ test('previous set results convert between lb and kg and use the latest matching
   await page.getByRole('button', { name: 'Add to workout', exact: true }).click()
   await expect(active.locator('.previous-set').first()).toHaveText('61.23 kg × 5')
   await expect(active.locator('.previous-summary time').first()).toHaveAttribute('datetime', '2026-10-14')
+  await expect(active.locator('.previous-summary').first()).not.toContainText('?')
   await active.getByRole('button', { name: 'Add set', exact: false }).click()
   await expect(active.locator('.previous-set').nth(1)).toHaveText('83.91 kg × 3')
   await page.getByLabel('Weight unit', { exact: true }).selectOption('lb')

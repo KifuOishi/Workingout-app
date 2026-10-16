@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
 
+async function fillSets(active) {
+  for (const input of await active.getByRole('spinbutton', { name: /^Weight / }).all()) await input.fill('20')
+  for (const input of await active.getByRole('spinbutton', { name: /^reps / }).all()) await input.fill('10')
+}
+
 test('running timer survives reload and finishing can retry without duplicate history', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-15T12:00:00') })
   await page.goto('/#/templates')
@@ -17,6 +22,7 @@ test('running timer survives reload and finishing can retry without duplicate hi
   await expect(active.locator('output')).toHaveText(/^01:(?:2[5-9]|30)$/)
   await page.clock.fastForward(90_500)
   await expect(active.getByRole('alert')).toContainText('Rest is over')
+  await fillSets(active)
   for (const checkbox of await active.getByRole('checkbox').all()) await checkbox.check()
   await page.evaluate(() => {
     const original = Storage.prototype.setItem
@@ -50,7 +56,8 @@ test('template, timed rest, pause, reload, finish and perform again', async ({ p
   await page.getByRole('button', { name: 'Start workout', exact: true }).click()
   const active = page.locator('#current-workout')
   await expect(active.getByRole('checkbox')).toHaveCount(9)
-  await expect(active.getByRole('button', { name: 'Finish & save to history' })).toBeDisabled()
+  await fillSets(active)
+  await expect(active.getByRole('button', { name: 'Finish & save to history' })).toBeEnabled()
   await active.getByRole('checkbox').nth(0).check()
   await expect(active.locator('output')).toHaveText('02:00')
   await page.clock.runFor(30_000)
@@ -70,10 +77,11 @@ test('template, timed rest, pause, reload, finish and perform again', async ({ p
   await expect(page.locator('.history .record')).toHaveCount(3)
   await page.reload()
   await expect(page.locator('.history .record')).toHaveCount(3)
+  await page.getByRole('button', { name: 'Workout actions', exact: true }).first().click()
   await page.getByRole('button', { name: 'Perform again', exact: true }).first().click()
-  await expect(active.getByRole('checkbox')).toHaveCount(3)
+  await expect(active.getByRole('checkbox')).toHaveCount(9)
   await page.reload()
-  await expect(active.getByRole('checkbox')).toHaveCount(3)
+  await expect(active.getByRole('checkbox')).toHaveCount(9)
   for (const checkbox of await active.getByRole('checkbox').all()) await expect(checkbox).not.toBeChecked()
   await page.getByRole('link', { name: 'History', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat this day' }).click()
@@ -94,14 +102,22 @@ test('units, template editing, language switching and mobile layout', async ({ p
   await page.getByLabel('Template name').fill('Strength')
   const editor = page.locator('.template-editor')
   await editor.getByRole('button', { name: 'Add exercise' }).click()
-  await editor.getByRole('spinbutton', { name: 'Weight (kg)' }).fill('100')
+  await expect(editor.getByRole('spinbutton', { name: /Weight|reps/ })).toHaveCount(0)
+  await editor.getByRole('spinbutton', { name: 'sets', exact: true }).fill('4')
   await page.getByLabel('Weight unit', { exact: true }).selectOption('lb')
-  await expect(editor.getByRole('spinbutton', { name: 'Weight (lb)' })).toHaveValue('220.462262')
   await editor.getByRole('button', { name: 'Save template' }).click()
   await page.locator('.template-card').getByRole('button', { name: 'Edit', exact: true }).click()
   await page.getByLabel('Template name').fill('Updated strength')
   await editor.getByRole('button', { name: 'Save template' }).click()
   await page.getByRole('button', { name: 'Start workout', exact: true }).click()
+  const active = page.locator('#current-workout')
+  await expect(active.getByRole('checkbox')).toHaveCount(4)
+  await expect(active.getByRole('checkbox').first()).toBeDisabled()
+  await expect(active.getByRole('spinbutton', { name: /^Weight / }).first()).toHaveValue('')
+  await expect(active.getByRole('spinbutton', { name: /^reps / }).first()).toHaveValue('')
+  const item = await page.evaluate(() => JSON.parse(localStorage.getItem('workingout.planner.v1')).templates[0].items[0])
+  expect(item.weight).toBeUndefined()
+  expect(item.reps).toBeUndefined()
   for (const language of ['ja', 'es', 'zh', 'en']) {
     await page.locator('.settings select').first().selectOption(language)
     await expect(page.locator('html')).toHaveAttribute('lang', language)

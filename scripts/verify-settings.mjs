@@ -26,7 +26,8 @@ function moduleUrl(file) {
 }
 const { default: App } = await import(moduleUrl(path.resolve('src/App.tsx')))
 const { fromKg, toKg, messages, readSettings, translator } = await import(moduleUrl(path.resolve('src/i18n.ts')))
-const { defaultExercises, categories } = await import(moduleUrl(path.resolve('src/exercises.ts')))
+const { defaultExercises, categories, equipmentTypes } = await import(moduleUrl(path.resolve('src/exercises.ts')))
+assert.ok(defaultExercises.every(exercise => equipmentTypes.includes(exercise.equipment)))
 const { exerciseLabel, categoryLabel } = await import(moduleUrl(path.resolve('src/exerciseLabels.ts')))
 const storage = new Map()
 globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }
@@ -67,4 +68,4 @@ for (const language of ['en', 'ja', 'es', 'zh']) {
     assert.equal(JSON.parse(storage.get('workingout.records.v1'))[0].weight, 20)
   }
 }
-console.log('PASS: four languages, 48 exercise translations, eight language/unit renders, legacy records, custom names, settings reload, kg/lb conversion')
+console.log('PASS: four languages, ' + defaultExercises.length + ' exercise translations, eight language/unit renders, legacy records, custom names, settings reload, kg/lb conversion')

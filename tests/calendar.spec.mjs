@@ -30,6 +30,7 @@ test('recorded dates open filtered history with reload, back and clear support',
   await expect(page.locator('.calendar-day.is-selected')).toContainText('3')
   await page.locator('.history-calendar [data-date="2026-10-14"]').click()
   await expect(page.locator('.history .record')).toHaveCount(1)
+  await page.locator('.workout-history-card > details > summary').click()
   await page.locator('.history .record .actions').getByRole('button', { name: 'Delete', exact: false }).click()
   await page.locator('.delete-confirm').getByRole('button', { name: 'Delete', exact: true }).click()
   await page.getByRole('link', { name: 'Home', exact: true }).click()

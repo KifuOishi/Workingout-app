@@ -28,7 +28,7 @@ test('per-set values, previous results, completion, rest and exact history survi
   }
   await active.getByRole('spinbutton', { name: 'Rest interval 1', exact: true }).fill('2')
   await active.getByRole('checkbox').first().check()
-  await expect(active.getByRole('button', { name: 'Finish & save to history' })).toBeDisabled()
+  await expect(active.getByRole('button', { name: 'Finish & save to history' })).toBeEnabled()
   await page.clock.runFor(2500)
   await expect(active.getByRole('alert')).toContainText('Rest is over')
   await page.reload()
@@ -43,7 +43,8 @@ test('per-set values, previous results, completion, rest and exact history survi
   await page.getByRole('link', { name: 'Home', exact: true }).click()
   await expect(page.locator('.stats > div').nth(2)).toContainText('4,540')
   await page.getByRole('link', { name: 'History', exact: true }).click()
-  await page.locator('.history .record').nth(1).getByRole('button', { name: 'Perform again', exact: true }).click()
+  for (const summary of await page.locator('.workout-history-card > details > summary').all()) await summary.click()
+  await page.locator('.history .record').first().getByRole('button', { name: 'Repeat exercise', exact: true }).click()
   await expect(active.locator('.previous-set').nth(1)).toHaveText('65 kg × 8')
   await expect(active.getByRole('spinbutton', { name: 'Weight 2 (kg)', exact: true })).toHaveValue('65')
   await expect(active.getByRole('checkbox').first()).not.toBeChecked()

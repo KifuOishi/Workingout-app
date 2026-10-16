@@ -37,7 +37,7 @@ test('start empty, add existing and custom exercises, navigate with a running ti
   await add.getByRole('button', { name: 'Save and select exercise' }).click()
   await add.getByRole('button', { name: 'Add to workout', exact: true }).click()
   await expect(active.getByRole('checkbox')).toHaveCount(2)
-  await expect(active.getByRole('button', { name: 'Finish & save to history' })).toBeDisabled()
+  await expect(active.getByRole('button', { name: 'Finish & save to history' })).toBeEnabled()
   await page.getByRole('link', { name: 'Templates', exact: true }).click()
   await expect(page.locator('.template-grid')).toBeVisible()
   await expect(active).toHaveCount(0)

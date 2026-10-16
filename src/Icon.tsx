@@ -1,6 +1,7 @@
-type Name = 'home' | 'workout' | 'templates' | 'calendar' | 'history' | 'arrow'
+type Name = 'home' | 'workout' | 'templates' | 'calendar' | 'history' | 'progress' | 'arrow'
 export default function Icon({ name, className = '' }: { name: Name; className?: string }) {
   const paths = {
+    progress: <><path d="M4 3v17h17M7 15l4-5 4 3 5-7" /></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-13 4h1m6 0h1m-8 3h1" /></>,
     home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" /><path d="M9 21v-8h6v8" /></>,
     workout: <><path d="m6 6 12 12M4 8l4-4M2 6l4-4m10 18 4-4m-2 6 4-4M4 4l4 4m8 8 4 4" /></>,

@@ -91,6 +91,8 @@ Language and unit preferences are saved in the current browser.
 - **Calendar** (`#/calendar`): A dedicated training calendar, also used on mobile and narrow screens.
 - **History** (`#/history`): Review records and repeat previous workouts. Select **Add a past record** to open the manual entry form.
 
+History keeps date headings and shows one expandable card per workout. Open a card to review its exercises, individual sets, notes, and total volume. Cards show the workout name, exercise/set counts, and duration when available. **Perform again** repeats the entire workout; **Repeat exercise** inside the expanded details repeats just one exercise. Multiple workouts on the same day remain separate. Older records with a recognizable session ID are grouped too; manual records without session information remain independent rather than being combined by guesswork.
+
 On mobile, use the bottom navigation to switch pages. The layout accounts for the bottom safe area and provides touch-friendly inputs and completion controls. Progress and remaining rest time stay visible while scrolling through an active workout.
 
 Browser tests check for horizontal overflow at widths of 320, 390, 768, and 1440 pixels across all four languages.
@@ -105,16 +107,33 @@ Workout progress and the timer are preserved when switching pages or reloading. 
 
 ## Templates and set tracking
 
-- Select **Create template** to enter a name, exercise weights, reps, set counts, and a rest interval in seconds. Saved templates can be edited or deleted.
+- Select **Create template** to enter a name, exercises, set counts, and a rest interval in seconds. Weight and reps are entered during the workout. Saved templates can be edited or deleted.
 - Select **Start workout** to begin a template. Each set appears as a separate card with previous results, weight, reps, completion status, and rest settings.
 - Enter the actual weight and reps for each set, then check it off when complete. Uncheck a set to edit it again.
 - Checking a set automatically starts its configured rest interval. Select **Start rest** to start a timer manually. Set an interval to 0 to disable automatic rest for that set.
 - Add or remove sets as needed. Uncheck completed sets before deleting them.
 - Pause, resume, or reset the timer. For example, 120 seconds gives a two-minute rest interval.
 - When rest ends, the app displays an alert and plays a sound when supported by the browser. Select **Enable notifications** and grant permission to receive browser notifications. The page must remain open; device sleep and browser restrictions can delay alerts.
-- Once every set is checked, select **Finish & save to history** to save the actual results. Starting a workout alone does not create history records. Total volume is the sum of weight multiplied by reps for every completed set.
+- Select **Finish & save to history** when you are done. If unchecked sets remain, choose **Remove unfinished sets & save** to keep only checked sets, or **Mark remaining sets complete & save** to include all sets with their entered values. The original template is unchanged. Empty results cannot be saved, and missing weight/reps must be filled before marking all sets complete.
+- After saving, a completion summary shows the exercises, individual set results, total sets, volume, and elapsed time in hours, minutes, and seconds. Elapsed time includes rest and time spent in other apps. **View summary** in History reopens it after reloading. Duration and workout grouping are included in backups; older records without duration remain compatible.
+- Starting a workout alone does not create history records. Total volume is the sum of weight multiplied by reps for all saved sets.
 - In history, select **Perform again** to repeat an exercise or **Repeat this day** to repeat that day's exercises. The app asks before replacing a workout already in progress.
 - Templates, workout progress, and timer deadlines are saved in the browser.
+
+## Progress and workout tools
+
+After finishing a workout, the summary offers an optional effort rating (Had more in me, Just right, Tough) and a workout-wide note. Both may be left blank. Changes save automatically across the workout's records, appear in expanded History, and can be edited later through **View summary**. Reflections are included in backups and are not copied to a new workout by **Perform again**.
+
+- Open the dedicated **Progress** page from navigation to choose an exercise and view its best weight or reps per workout, a result table, and personal bests. Values follow the selected kg/lb unit.
+- **New PR!** appears on completed sets and history when weight or reps exceeds the previous best. The first eligible result establishes a personal best. Warm-up sets are excluded; normal and drop sets count.
+- Select **Normal**, **Warm-up**, or **Drop set** for each set before checking it off. Set types are preserved in history, backups, and **Perform again**.
+- Use the up/down buttons to reorder exercises in a template or active workout. Changing today's order does not change the saved template.
+- During a workout, hold the six-dot handle next to an exercise and drag it to the highlighted destination. While dragging, exercises collapse to a compact list of names; releasing or cancelling restores the sets. This works with a mouse or touch; moving near the screen edge scrolls long workouts. Escape or a cancelled touch cancels the move. The up/down buttons remain available.
+- Use **+30 seconds** or **-30 seconds** to adjust the rest timer. A paused timer stays paused, and running background notifications are rescheduled for the new deadline within the existing free limits.
+
+All preset exercises are classified by equipment or type. Exercise selection groups them under barbell, dumbbell, machine/other, and bodyweight headings. When creating a custom exercise, choose its name, muscle group, and equipment/type. Types are classification labels; sets still use weight and reps. Older custom exercises without a type appear under machine/other.
+
+**Assisted chin-up** and **Assisted dip** display assistance as negative weight in workouts, previous results, history, summaries, and progress charts. For example, 30 kg of assistance appears as -30 kg. Less assistance counts as an improvement for weight PRs. Internally the assistance amount remains a positive kg magnitude for compatibility, so exported weights for these exercises remain positive. Other exercises retain their normal weight display.
 
 ## Training calendar
 

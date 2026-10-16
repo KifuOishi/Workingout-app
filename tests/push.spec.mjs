@@ -20,6 +20,22 @@ async function setup(page, status = 200) {
   await page.getByRole('button', { name: 'Start empty workout', exact: true }).click()
   return calls
 }
+
+test('adjusting running rest reschedules background delivery at the new deadline', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-15T12:00:00') })
+  const calls = await setup(page)
+  await page.getByRole('button', { name: 'Enable notifications', exact: true }).click()
+  await page.getByRole('button', { name: 'Start rest', exact: true }).click()
+  await expect.poll(() => calls.filter(call => call.action === 'schedule').length).toBe(1)
+  const before = calls.find(call => call.action === 'schedule')
+  await page.getByRole('button', { name: '+30 seconds', exact: true }).click()
+  await expect.poll(() => calls.filter(call => call.action === 'schedule').length).toBe(2)
+  const after = calls.filter(call => call.action === 'schedule').at(-1)
+  expect(after.endAt - before.endAt).toBe(30000)
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: '-30 seconds', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Rest is over')
+  await expect.poll(() => calls.at(-1)?.action).toBe('cancel')
+})
 test('reserve, cancel on pause/reset, resume, and do not cancel a natural expiry', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-15T12:00:00') })
   const calls = await setup(page)

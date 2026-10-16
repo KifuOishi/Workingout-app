@@ -1,7 +1,7 @@
-import { categories, exerciseStorageKey } from './exercises'
+import { categories, exerciseStorageKey, validEquipment } from './exercises'
 import type { Exercise } from './exercises'
 import type { Language, Unit } from './i18n'
-import { plannerKey, readPlanner, remainingTime, validItem } from './workouts'
+import { plannerKey, readPlanner, remainingTime, validItem, validWorkoutMetadata } from './workouts'
 import type { PlanItem, PlannerState } from './workouts'
 
 export const recordsKey = 'workingout.records.v1'
@@ -29,8 +29,8 @@ export function parseBackup(text: string): Backup {
     const value = JSON.parse(text)
     if (value?.app !== 'lift-log' || value.version !== 1 || typeof value.exportedAt !== 'string' || !Number.isFinite(Date.parse(value.exportedAt))) throw new Error()
     const data = value.data
-    if (!data || !Array.isArray(data.records) || !data.records.every((record: PlanItem & { date: string }) => validItem(record) && validDate(record.date)) || !uniqueIds(data.records)) throw new Error()
-    if (!Array.isArray(data.exercises) || !data.exercises.every((exercise: Exercise) => exercise && categories.includes(exercise.category) && typeof exercise.name === 'string' && exercise.name.trim().length > 0 && exercise.name.length <= 80)) throw new Error()
+    if (!data || !Array.isArray(data.records) || !data.records.every((record: PlanItem & { date: string }) => validItem(record) && validDate(record.date) && validWorkoutMetadata(record)) || !uniqueIds(data.records)) throw new Error()
+    if (!Array.isArray(data.exercises) || !data.exercises.every((exercise: Exercise) => exercise && validEquipment(exercise.equipment) && categories.includes(exercise.category) && typeof exercise.name === 'string' && exercise.name.trim().length > 0 && exercise.name.length <= 80)) throw new Error()
     if (!data.settings || !['en', 'ja', 'es', 'zh'].includes(data.settings.language) || !['kg', 'lb'].includes(data.settings.unit)) throw new Error()
     if (!data.planner || typeof data.planner !== 'object') throw new Error()
     const planner = readPlanner(JSON.stringify(data.planner))

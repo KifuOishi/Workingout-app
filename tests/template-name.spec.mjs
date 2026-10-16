@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test'
+
+test('duplicate template names are blocked but editing the same template is allowed', async ({ page }) => {
+  await page.goto('/#/templates')
+  const editor = page.locator('.template-editor')
+  async function create(name) {
+    await page.getByRole('button', { name: 'Create template', exact: true }).click()
+    await editor.getByLabel('Template name').fill(name)
+    await editor.getByRole('button', { name: 'Add exercise' }).click()
+    await editor.getByRole('button', { name: 'Save template', exact: true }).click()
+  }
+  await create('Upper body')
+  await create('  UPPER BODY  ')
+  await expect(page.getByRole('alert')).toContainText('A template with this name already exists')
+  await expect(page.locator('.template-card')).toHaveCount(1)
+  await editor.getByLabel('Template name').fill('Leg day')
+  await editor.getByRole('button', { name: 'Save template', exact: true }).click()
+  await expect(page.locator('.template-card')).toHaveCount(2)
+  await page.locator('.template-card').nth(1).getByRole('button', { name: 'Edit', exact: true }).click()
+  await editor.getByLabel('Template name').fill('Upper body')
+  await editor.getByRole('button', { name: 'Save template', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('A template with this name already exists')
+  await editor.getByLabel('Template name').fill('Leg day')
+  await editor.getByRole('spinbutton', { name: 'sets', exact: true }).fill('4')
+  await editor.getByRole('button', { name: 'Save template', exact: true }).click()
+  await expect(editor).toHaveCount(0)
+  const templates = await page.evaluate(() => JSON.parse(localStorage.getItem('workingout.planner.v1')).templates)
+  expect(templates.map(plan => plan.name)).toEqual(['Upper body', 'Leg day'])
+  expect(templates[1].items[0].sets).toBe(4)
+})

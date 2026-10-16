@@ -12,7 +12,7 @@ test('responsive pages across four languages, touch targets and bottom navigatio
     await page.setViewportSize({ width, height: 844 })
     for (const language of ['en', 'ja', 'es', 'zh']) {
       await page.locator('.settings select').first().selectOption(language)
-      for (const route of ['home', 'workout', 'templates', 'calendar', 'history']) {
+      for (const route of ['home', 'workout', 'templates', 'calendar', 'history', 'progress']) {
         await page.locator(`.page-nav a[href="#/${route}"]`).click()
         await expect(page.locator(`.page-nav a[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page')
         const layout = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }))

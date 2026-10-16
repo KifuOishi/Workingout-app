@@ -1,7 +1,7 @@
-export type Page = 'home' | 'workout' | 'templates' | 'calendar' | 'history'
-export const pages: Page[] = ['home', 'workout', 'templates', 'calendar', 'history']
+export type Page = 'home' | 'workout' | 'templates' | 'calendar' | 'history' | 'progress'
+export const pages: Page[] = ['home', 'workout', 'templates', 'calendar', 'history', 'progress']
 export function readPage(): Page {
-  const hash = typeof window === 'undefined' ? '' : window.location.hash.slice(2).split('?')[0]
+  const hash = typeof window === 'undefined' ? '' : window.location.hash.replace(/^#\/?/, '').split('?')[0].replace(/\/$/, '')
   return pages.includes(hash as Page) ? hash as Page : 'home'
 }
 export function readHistoryDate(): string {

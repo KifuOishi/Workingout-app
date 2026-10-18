@@ -29,7 +29,7 @@ test('previous values are subdued, editable, checkable and usable when completin
   await expect(active.getByRole('spinbutton', { name: 'Weight 2 (kg)', exact: true })).toHaveClass('suggested-value')
   await active.getByRole('button', { name: 'Finish & save to history', exact: true }).click()
   await active.getByRole('button', { name: 'Mark remaining sets complete & save', exact: true }).click()
-  await expect(page.getByRole('region', { name: 'Workout complete', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Workout complete', exact: true })).toBeVisible()
   const records = await page.evaluate(() => JSON.parse(localStorage.getItem('workingout.records.v1')))
   expect(records.at(-1).setDetails).toEqual([{ weight: 55, reps: 8 }, { weight: 45, reps: 10 }])
 })

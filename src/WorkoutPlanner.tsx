@@ -1,7 +1,8 @@
+import useNotice from './useNotice'
 import ExerciseDragHandle from './ExerciseDragHandle'
 import { isAssisted, signedWeight, equipmentTypes } from './exercises'
 import { bests, sameExercise, moveItem } from './progress'
-import { setTypes } from './workouts'
+import SetTypePicker from './SetTypePicker'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Exercise, Equipment } from './exercises'
@@ -24,7 +25,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
   const [initial] = useState(readPlanner)
   const [state, setState] = useState(initial.state)
   const [error, setError] = useState<MessageKey | null>(initial.error ? 'plannerError' : null)
-  const [notice, setNotice] = useState<MessageKey | null>(null)
+  const [notice, setNotice] = useNotice(page)
   const [editor, setEditor] = useState<Template | null>(null)
   const [pending, setPending] = useState<Template | null>(null)
   const [discarding, setDiscarding] = useState(false)
@@ -197,7 +198,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
     const results = completedRecords(finalSession)
     if (results.length === 0) { setError('noCompletedSets'); return }
     // Stable record IDs make retry safe if saving history succeeds but clearing progress fails.
-    if (onFinish(results) && commit({ ...state, session: null })) { setFinishing(false); setNotice('workoutSaved'); setDiscarding(false); setAddingExercise(false); navigate('history') }
+    if (onFinish(results) && commit({ ...state, session: null })) { setFinishing(false); setNotice(null); setDiscarding(false); setAddingExercise(false); navigate('history') }
   }
   const secondsLeft = timer ? Math.ceil(remainingTime(timer, now) / 1000) : 0
   const allSets = session ? Object.values(session.setRows).flat() : []
@@ -215,6 +216,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
       <div className="editor-fields"><label>{t('templateName')}<input required maxLength={80} value={editor.name} onChange={e => setEditor({ ...editor, name: e.target.value })} placeholder={t('templatePlaceholder')} /></label><label>{t('restInterval')} ({t('seconds')})<input type="number" required min="0" max="3600" step="1" inputMode="numeric" value={Number.isNaN(editor.restSeconds) ? '' : editor.restSeconds} onChange={e => setEditor({ ...editor, restSeconds: e.target.value === '' ? NaN : +e.target.value })} /></label></div>
       <p className="hint">{t('setRestHelp')}</p>
       {editor.items.map((item, index) => <div className="template-item" key={item.id}><div className="template-item-top"><label>{index + 1}. {t('exercise')}<select value={JSON.stringify([item.category, item.exercise])} onChange={e => { const [category, exercise] = JSON.parse(e.target.value); updateItem(item.id, { category, exercise }) }}>{!exercises.some(e => e.name === item.exercise && e.category === item.category) && <option value={JSON.stringify([item.category, item.exercise])}>{exerciseLabel(item.exercise, language)}</option>}{categories.flatMap(c => equipmentTypes.map(type => { const group = exercises.filter(e => e.category === c && (e.equipment ?? 'machine') === type); return group.length ? <optgroup key={c + type} label={categoryLabel(c, language) + ' / ' + t(type)}>{group.map(e => <option key={e.name} value={JSON.stringify([c, e.name])}>{exerciseLabel(e.name, language)}</option>)}</optgroup> : null }))}</select></label><button type="button" className="text-button" aria-label={`${t('delete')}: ${exerciseLabel(item.exercise, language)}`} onClick={() => setEditor({ ...editor, items: editor.items.filter(i => i.id !== item.id) })}>{t('delete')}</button><button type="button" className="order-button" aria-label={t('moveUp') + ': ' + exerciseLabel(item.exercise, language)} disabled={index === 0} onClick={() => setEditor({ ...editor, items: moveItem(editor.items, index, -1) })}>&#8593;</button><button type="button" className="order-button" aria-label={t('moveDown') + ': ' + exerciseLabel(item.exercise, language)} disabled={index === editor.items.length - 1} onClick={() => setEditor({ ...editor, items: moveItem(editor.items, index, 1) })}>&#8595;</button></div>
+        <ExercisePicker customOnly category={item.category ?? exercises.find(exercise => exercise.name === item.exercise)?.category ?? categories[0]} exercise={item.exercise} exercises={exercises} language={language} t={t} onAdd={onAddExercise} onChange={(category, exercise) => updateItem(item.id, { category, exercise })} />
         <label className="template-set-count">{t('sets')}<input type="number" required min="1" max="1000" step="1" inputMode="numeric" value={Number.isNaN(item.sets) ? '' : item.sets} onChange={e => updateItem(item.id, { sets: e.target.value === '' ? NaN : +e.target.value })} /></label>
       </div>)}
       <div className="planner-actions"><button type="button" className="secondary" onClick={addItem}>{t('addPlanItem')}</button><button className="primary" type="submit">{t('saveTemplate')}</button><button type="button" className="text-button" onClick={() => setEditor(null)}>{t('cancel')}</button></div>
@@ -237,18 +239,20 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
           const toIndex = session.items.findIndex(exercise => exercise.id === to)
           if (fromIndex >= 0 && toIndex >= 0) commit({ ...state, session: { ...session, items: moveItem(session.items, fromIndex, toIndex - fromIndex) } })
         }} /><button className="order-button" aria-label={t('moveUp') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === 0} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, -1) } })}>&#8593;</button><button className="order-button" aria-label={t('moveDown') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === session.items.length - 1} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, 1) } })}>&#8595;</button><span className="count">{rows.filter(row => row.done).length} / {rows.length}</span></div></div>
+          <div className="set-table-heading" aria-hidden="true"><span>{t('set')}</span><span>{t('previous')}</span><span>{unit}</span><span>{t('reps')}</span><span>✓</span></div>
           {rows.map((row, index) => {
             const prev = previous?.setDetails ? previous.setDetails[index] : previous && index < previous.sets ? previous : undefined
             const best = bests(records.filter(record => sameExercise(record, item)))
             const pr = row.done && row.type !== 'warmup' && (best.count === 0 || signedWeight(item.exercise, row.weight!) > best.weight || row.reps! > best.reps)
             return <div className={row.done ? 'set-entry set-complete' : 'set-entry'} key={row.id}>
-              <div className="set-card-heading"><div className="set-card-title"><span className="set-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{t('set')} {index + 1}</strong><p className="previous-summary"><span>{t('previous')}{previous && <time dateTime={previous.date}> / {new Date(previous.date + 'T00:00:00').toLocaleDateString(locales[language], { month: 'short', day: 'numeric' })}</time>}</span><span className="previous-set">{prev ? num(fromKg(signedWeight(item.exercise, prev.weight), unit)) + ' ' + unit + ' × ' + prev.reps : '—'}</span></p></div></div>
-                <label className="set-check"><input type="checkbox" aria-label={exerciseLabel(item.exercise, language) + ' ' + t('set') + ' ' + (index + 1)} checked={row.done} disabled={row.weight === null || row.reps === null} onChange={() => toggleSet(item.id, row.id, Date.now())} /><span aria-hidden="true">✓</span></label>
-              </div>
-              {pr && <span className="pr-badge" role="status">{t('newPR')}</span>}<label className="set-type">{t('setType')}<select aria-label={t('setType') + ' ' + (index + 1)} value={row.type ?? 'normal'} disabled={row.done} onChange={e => updateSet(item.id, row.id, { type: e.target.value as SessionSet['type'] })}>{setTypes.map(type => <option key={type} value={type}>{t(type)}</option>)}</select></label><div className="set-card-fields">
+              <SetTypePicker value={row.type ?? 'normal'} index={index + 1} disabled={row.done} t={t} onChange={type => updateSet(item.id, row.id, { type })} />
+              <div className="compact-previous" title={previous ? new Date(previous.date + 'T00:00:00').toLocaleDateString(locales[language]) : undefined}><span className="previous-set">{prev ? num(fromKg(signedWeight(item.exercise, prev.weight), unit)) + ' ' + unit + ' × ' + prev.reps : '—'}</span></div>
+              <div className="set-card-fields">
                 <label>{t('weight')} <span className="field-unit">{unit}</span><input className={!row.done && row.weightSource === 'previous' ? 'suggested-value' : undefined} aria-label={t('weight') + ' ' + (index + 1) + ' (' + unit + ')'} type="number" min={isAssisted(item.exercise) ? undefined : 0} max={isAssisted(item.exercise) ? 0 : undefined} step="any" inputMode="decimal" disabled={row.done} value={row.weight === null ? '' : +fromKg(signedWeight(item.exercise, row.weight), unit).toFixed(6)} onChange={e => updateSet(item.id, row.id, { weightSource: 'manual', weight: e.target.value === '' ? null : Math.abs(toKg(+e.target.value, unit)) })} /></label>
                 <label>{t('reps')}<input className={!row.done && row.repsSource === 'previous' ? 'suggested-value' : undefined} aria-label={t('reps') + ' ' + (index + 1)} type="number" min="1" step="1" inputMode="numeric" disabled={row.done} value={row.reps ?? ''} onChange={e => updateSet(item.id, row.id, { repsSource: 'manual', reps: e.target.value === '' ? null : Math.max(1, Math.floor(+e.target.value)) })} /></label>
               </div>
+              <label className="set-check"><input type="checkbox" aria-label={exerciseLabel(item.exercise, language) + ' ' + t('set') + ' ' + (index + 1)} checked={row.done} disabled={row.weight === null || row.reps === null} onChange={() => toggleSet(item.id, row.id, Date.now())} /><span aria-hidden="true">✓</span></label>
+              {pr && <span className="pr-badge" role="status">{t('newPR')}</span>}
               <div className="set-card-footer"><label className="set-rest">{t('restInterval')}<RestInput label={t('restInterval') + ' ' + (index + 1)} value={row.restSeconds} onChange={value => updateSet(item.id, row.id, { restSeconds: value })} /><small>{t('seconds')}</small></label>
                 <button type="button" className="remove-set" aria-label={t('removeSet') + ' ' + (index + 1)} disabled={row.done || rows.length <= 1} onClick={() => commit({ ...state, session: { ...session, completed: session.completed.filter(id => id !== item.id), setRows: { ...session.setRows, [item.id]: rows.filter(set => set.id !== row.id) } } })}>×</button>
               </div>

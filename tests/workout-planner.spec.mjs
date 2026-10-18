@@ -1,3 +1,4 @@
+import { selectPreference } from './helpers/preferences.mjs'
 import { test, expect } from '@playwright/test'
 
 async function fillSets(active) {
@@ -104,7 +105,7 @@ test('units, template editing, language switching and mobile layout', async ({ p
   await editor.getByRole('button', { name: 'Add exercise' }).click()
   await expect(editor.getByRole('spinbutton', { name: /Weight|reps/ })).toHaveCount(0)
   await editor.getByRole('spinbutton', { name: 'sets', exact: true }).fill('4')
-  await page.getByLabel('Weight unit', { exact: true }).selectOption('lb')
+  await selectPreference(page, 'unit', 'lb')
   await editor.getByRole('button', { name: 'Save template' }).click()
   await page.locator('.template-card').getByRole('button', { name: 'Edit', exact: true }).click()
   await page.getByLabel('Template name').fill('Updated strength')
@@ -119,7 +120,7 @@ test('units, template editing, language switching and mobile layout', async ({ p
   expect(item.weight).toBeUndefined()
   expect(item.reps).toBeUndefined()
   for (const language of ['ja', 'es', 'zh', 'en']) {
-    await page.locator('.settings select').first().selectOption(language)
+    await selectPreference(page, 'language', language)
     await expect(page.locator('html')).toHaveAttribute('lang', language)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   }

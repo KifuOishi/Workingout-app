@@ -1,3 +1,4 @@
+import useNotice from './useNotice'
 import { isAssisted, signedWeight } from './exercises'
 import TrainingProgress from './TrainingProgress'
 import { useEffect, useState } from 'react'
@@ -72,7 +73,7 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
   const [initial] = useState(load)
   const [records, setRecords] = useState<Workout[]>(initial.records)
   const [error, setError] = useState<MessageKey | null>(initial.error ? 'loadError' : null)
-  const [notice, setNotice] = useState<MessageKey | null>(restored ? 'backupRestored' : null)
+  const [notice, setNotice] = useNotice(page, restored ? 'backupRestored' : null)
   const [date, setDate] = useState(today)
   const [catalogInitial] = useState(readExercises)
   const [customExercises, setCustomExercises] = useState<Exercise[]>(catalogInitial.exercises)
@@ -114,25 +115,25 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
   return (
     <div className="app">
       {backupOpen && <BackupDialog t={t} language={language} onClose={() => setBackupOpen(false)} onRestored={onRestored} />}
-      <header><a className="brand" href="#"><span className="brand-icon"><Icon name="workout" /></span> LIFT LOG</a><button className="secondary backup-trigger" onClick={() => setBackupOpen(true)}>{t('backup')}</button><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></header>
+      <header><a className="brand" href="#"><span className="brand-icon"><Icon name="workout" /></span> LIFT LOG</a><button className="secondary backup-trigger" onClick={() => setBackupOpen(true)}>{t('backup')}</button></header>
       <nav className="page-nav" aria-label={t('journal')}>{pages.map(item => <a key={item} href={'#/' + item} onClick={event => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(item) } }} aria-current={page === item ? 'page' : undefined}><Icon name={item} /><span>{t(item === 'templates' ? 'templatesNav' : item === 'history' ? 'historyNav' : item === 'calendar' ? 'calendarNav' : item)}</span></a>)}</nav>
       <main>
         {page === 'home' && <div className="home-layout"><div className="home-main">
         <div className="intro"><span className="eyebrow">{t('journal')}</span><h1>{t('title')}</h1><p>{t('subtitle')}</p></div>
+        <div className="home-start panel"><div className="home-art" aria-hidden="true"><div className="art-orbit" /><div className="art-orbit art-orbit-inner" /><Icon name="workout" /><span className="art-dot" /></div><div className="home-start-copy"><span className="eyebrow">LIFT LOG / TODAY</span><h2>{t('noActiveWorkout')}</h2><p>{t('emptyHint')}</p></div><div className="planner-actions">{hasSession ? <button className="primary" onClick={() => navigate('workout')}>{t('continueWorkout')}<Icon name="arrow" /></button> : <button className="primary" onClick={() => planner.current?.empty()}>{t('startEmpty')}<Icon name="arrow" /></button>}<button className="secondary" onClick={() => navigate('templates')}><Icon name="templates" />{t('fromTemplate')}<Icon name="arrow" /></button><button className="text-button" onClick={() => navigate('history')}>{t('history')}</button></div></div>
         <section className="stats" aria-label={t('summary')}>
           <div><span>{t('days')}</span><strong>{new Set(records.map(r => r.date)).size}<small>{t('dayUnit')}</small></strong></div>
           <div><span>{t('todaySets')}</span><strong>{number(current.reduce((s, r) => s + r.sets, 0))}<small>{t('sets')}</small></strong></div>
           <div><span>{t('volume')}</span><strong>{displayWeight(current.reduce((s, r) => s + workoutVolume(r), 0))}<small>{unit}</small></strong></div>
         </section>
-        <div className="home-start panel"><div className="home-art" aria-hidden="true"><div className="art-orbit" /><div className="art-orbit art-orbit-inner" /><Icon name="workout" /><span className="art-dot" /></div><div className="home-start-copy"><span className="eyebrow">LIFT LOG / TODAY</span><h2>{t('noActiveWorkout')}</h2><p>{t('emptyHint')}</p></div><div className="planner-actions">{hasSession ? <button className="primary" onClick={() => navigate('workout')}>{t('continueWorkout')}<Icon name="arrow" /></button> : <button className="primary" onClick={() => planner.current?.empty()}>{t('startEmpty')}<Icon name="arrow" /></button>}<button className="secondary" onClick={() => navigate('templates')}>{t('fromTemplate')}</button><button className="text-button" onClick={() => navigate('history')}>{t('history')}</button></div></div>
         <div className="home-shortcuts"><button className="shortcut-card" onClick={() => navigate('templates')}><span className="shortcut-icon"><Icon name="templates" /></span><span><strong>{t('templates')}</strong><small>{t('templateHint')}</small></span><Icon name="arrow" /></button><button className="shortcut-card" onClick={() => navigate('history')}><span className="shortcut-icon"><Icon name="history" /></span><span><strong>{t('history')}</strong><small>{t('subtitle')}</small></span><Icon name="arrow" /></button></div>
         <button className="secondary home-calendar-link" onClick={() => navigate('calendar')}><Icon name="calendar" />{t('calendar')}<Icon name="arrow" /></button>
         </div><aside className="home-calendar-sidebar"><WorkoutCalendar records={records} language={language} t={t} onSelect={date => navigate('history', date)} /></aside></div>}
-        {page === 'progress' && <TrainingProgress records={records} language={language} unit={unit} t={t} />}
+        {page === 'progress' && <TrainingProgress records={records} exercises={catalog} language={language} unit={unit} t={t} />}
         {page === 'calendar' && <div className="calendar-page"><WorkoutCalendar records={records} language={language} t={t} onSelect={date => navigate('history', date)} /></div>}
         {catalogInitial.error && <div role="alert" className="error">{t('catalogError')}</div>}
         {error && <div role="alert" className="error">{t(error)}</div>}
-        <p role="status" className="notice">{notice && t(notice)}</p>
+        {notice && <p role="status" className="notice">{t(notice)}</p>}
         <WorkoutPlanner ref={planner} page={page} navigate={navigate} onActiveChange={setHasSession} onAddExercise={addExercise} language={language} unit={unit} t={t} exercises={catalog} records={records} onFinish={items => { const saved = save([...records, ...items.filter(item => !records.some(record => record.id === item.id))], 'workoutSaved'); if (saved) setSummary(items.map(item => records.find(record => record.id === item.id) ?? item)); return saved }} />
         {page === 'history' && <>{summary && <WorkoutSummary records={summary} language={language} unit={unit} t={t} onClose={() => setSummary(null)} onReflectionChange={reflection => {
           const ids = new Set(summary.map(record => record.id))
@@ -169,11 +170,12 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
                     if (editing && ids.has(editing)) { setEditing(null); setNote('') }
                     if (summary?.some(item => ids.has(item.id))) setSummary(null)
                   }
-                }} records={rows} language={language} unit={unit} t={t} exercises={catalog} onTemplate={items => planner.current?.template(items)} onRepeat={items => planner.current?.repeat(items)} onEdit={edit} deleting={deleting} setDeleting={setDeleting} onDelete={record => { if (save(records.filter(item => item.id !== record.id), 'deleted')) { setDeleting(null); if (editing === record.id) { setEditing(null); setNote('') } if (summary?.some(item => item.id === record.id)) setSummary(null) }}} onSummary={items => { setSummary(items); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
+                }} records={rows} language={language} unit={unit} t={t} exercises={catalog} onTemplate={items => planner.current?.template(items)} onRepeat={items => planner.current?.repeat(items)} onEdit={edit} deleting={deleting} setDeleting={setDeleting} onDelete={record => { if (save(records.filter(item => item.id !== record.id), 'deleted')) { setDeleting(null); if (editing === record.id) { setEditing(null); setNote('') } if (summary?.some(item => item.id === record.id)) setSummary(null) }}} onSummary={items => setSummary(items)} />
               </section>
             })}
           </section>
         </div></>}
+        {(page === 'home' || page === 'workout') && <div className="preferences-panel"><div className="settings"><label>{t('language')}<select aria-label={t('language')} value={language} onChange={e => changeSettings({ ...settings, language: e.target.value as Language })}><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option><option value="zh">中文（简体）</option></select></label><label>{t('unit')}<select aria-label={t('unit')} value={unit} onChange={e => changeSettings({ ...settings, unit: e.target.value as Unit })}><option value="kg">kg</option><option value="lb">lb</option></select></label></div></div>}
         <footer>{t('local')}<span>{t('formula')}</span></footer>
       </main>
     </div>

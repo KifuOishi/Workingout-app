@@ -31,6 +31,7 @@ test('optional reflections save per workout, survive reload, can be cleared and 
   expect((await records()).every(record => !record.feeling && !record.workoutNote)).toBe(true)
   await reflection.getByLabel('Effort', { exact: true }).selectOption('easy')
   await reflection.getByLabel('Workout note', { exact: true }).fill('Original workout only')
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await card.getByRole('button', { name: 'Workout actions', exact: true }).click()
   await page.getByRole('button', { name: 'Perform again', exact: true }).click()
   for (const checkbox of await active.getByRole('checkbox').all()) await checkbox.check()

@@ -1,3 +1,4 @@
+import useNotice from './useNotice'
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { BackupError, backupMaxBytes, createBackup, parseBackup, restoreBackup } from './backup'
@@ -10,7 +11,7 @@ export default function BackupDialog({ t, language, onClose, onRestored }: { t: 
   const dialog = useRef<HTMLDialogElement>(null)
   const [pending, setPending] = useState<{ backup: Backup; name: string } | null>(null)
   const [error, setError] = useState<MessageKey | null>(null)
-  const [notice, setNotice] = useState<MessageKey | null>(null)
+  const [notice, setNotice] = useNotice()
   const [loading, setLoading] = useState(false)
   const revision = useRef(0)
   useEffect(() => {

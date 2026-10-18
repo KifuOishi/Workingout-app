@@ -1,3 +1,4 @@
+import { selectPreference } from './helpers/preferences.mjs'
 import { test, expect } from '@playwright/test'
 
 async function begin(page) {
@@ -23,8 +24,10 @@ test('remove unfinished sets, display summary and elapsed time, preserve the tem
   await active.getByRole('button', { name: 'Finish & save to history' }).click()
   await expect(active.locator('.finish-choice')).toBeVisible()
   await active.getByRole('button', { name: 'Remove unfinished sets & save', exact: true }).click()
-  const summary = page.getByRole('region', { name: 'Workout complete', exact: true })
+  const summary = page.getByRole('dialog', { name: 'Workout complete', exact: true })
   await expect(summary).toBeVisible()
+  expect(await summary.evaluate(element => element.matches(':modal'))).toBe(true)
+  await expect(summary.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
   await expect(summary.locator('.summary-duration')).toHaveText('00:02:05')
   await expect(summary.getByRole('heading', { name: 'First exercise' })).toBeVisible()
   await expect(summary.getByRole('heading', { name: 'Second exercise' })).toHaveCount(0)
@@ -38,10 +41,21 @@ test('remove unfinished sets, display summary and elapsed time, preserve the tem
   await page.getByRole('button', { name: 'Workout actions', exact: true }).first().click()
   await page.getByRole('button', { name: 'View summary', exact: true }).click()
   await expect(summary.locator('.summary-duration')).toHaveText('00:02:05')
-  await page.getByLabel('Weight unit', { exact: true }).selectOption('lb')
+  await page.keyboard.press('Escape')
+  await expect(summary).toHaveCount(0)
+  await selectPreference(page, 'unit', 'lb')
+  await page.getByRole('button', { name: 'Workout actions', exact: true }).first().click()
+  await page.getByRole('button', { name: 'View summary', exact: true }).click()
   await expect(summary.locator('.summary-exercises')).toContainText('143.3 lb')
   await page.setViewportSize({ width: 375, height: 812 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  const bounds = await summary.boundingBox()
+  expect(bounds.x).toBeGreaterThanOrEqual(0)
+  expect(bounds.y).toBeGreaterThanOrEqual(0)
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(812)
+  await summary.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(summary).toHaveCount(0)
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
 })
 
 test('mark unperformed sets complete saves all entered sets without changing template', async ({ page }) => {
@@ -52,7 +66,7 @@ test('mark unperformed sets complete saves all entered sets without changing tem
   await expect(active.getByRole('checkbox').first()).toBeChecked()
   await active.getByRole('button', { name: 'Finish & save to history' }).click()
   await active.getByRole('button', { name: 'Mark remaining sets complete & save', exact: true }).click()
-  await expect(page.getByRole('region', { name: 'Workout complete', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Workout complete', exact: true })).toBeVisible()
   const records = await page.evaluate(() => JSON.parse(localStorage.getItem('workingout.records.v1')))
   expect(records.map(record => record.sets)).toEqual([3, 3])
   expect(records[0].workoutId).toBe(records[1].workoutId)
@@ -67,6 +81,6 @@ test('all completed sets save immediately and an empty completion cannot be save
   await active.locator('.finish-choice').getByRole('button', { name: 'Cancel', exact: true }).click()
   for (const checkbox of await active.getByRole('checkbox').all()) await checkbox.check()
   await active.getByRole('button', { name: 'Finish & save to history' }).click()
-  await expect(page.getByRole('region', { name: 'Workout complete', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Workout complete', exact: true })).toBeVisible()
   await expect(page.locator('.finish-choice')).toHaveCount(0)
 })

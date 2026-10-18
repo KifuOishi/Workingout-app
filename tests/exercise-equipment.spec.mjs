@@ -1,3 +1,4 @@
+import { selectPreference } from './helpers/preferences.mjs'
 import { test, expect } from '@playwright/test'
 
 test('custom exercise creation saves its body part and equipment', async ({ page }) => {
@@ -61,9 +62,14 @@ test('only assisted chin-ups and dips show negative assistance, including histor
   await active.getByRole('button', { name: 'Finish & save to history', exact: true }).click()
   await expect(page.locator('.summary-exercises')).toContainText('-30 kg')
   await expect(page.locator('.summary-exercises')).toContainText('-15 kg')
-  await page.getByLabel('Weight unit', { exact: true }).selectOption('lb')
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
+  await selectPreference(page, 'unit', 'lb')
+  await page.getByRole('button', { name: 'Workout actions', exact: true }).first().click()
+  await page.getByRole('button', { name: 'View summary', exact: true }).click()
   await expect(page.locator('.summary-exercises')).toContainText('-66.14 lb')
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await page.getByRole('link', { name: 'Progress', exact: true }).click()
+  await page.locator('.exercise-trends > summary').click()
   await expect(page).toHaveURL(/#\/progress$/)
   await expect(page.locator('.training-progress .pr-stats')).toContainText('-66.14 lb')
   await expect(page.locator('.training-progress tbody tr')).toHaveCount(2)

@@ -1,3 +1,4 @@
+import { selectPreference } from './helpers/preferences.mjs'
 import { test, expect } from '@playwright/test'
 
 test('responsive pages across four languages, touch targets and bottom navigation', async ({ page }) => {
@@ -11,7 +12,7 @@ test('responsive pages across four languages, touch targets and bottom navigatio
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 844 })
     for (const language of ['en', 'ja', 'es', 'zh']) {
-      await page.locator('.settings select').first().selectOption(language)
+      await selectPreference(page, 'language', language)
       for (const route of ['home', 'workout', 'templates', 'calendar', 'history', 'progress']) {
         await page.locator(`.page-nav a[href="#/${route}"]`).click()
         await expect(page.locator(`.page-nav a[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page')
@@ -21,7 +22,7 @@ test('responsive pages across four languages, touch targets and bottom navigatio
     }
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.locator('.settings select').first().selectOption('en')
+  await selectPreference(page, 'language', 'en')
   await page.locator('.page-nav a[href="#/home"]').click()
   await page.screenshot({ path: 'test-results/mobile-home.png', fullPage: true, animations: 'disabled' })
   const nav = await page.locator('.page-nav').boundingBox()

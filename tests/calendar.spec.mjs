@@ -1,3 +1,4 @@
+import { selectPreference } from './helpers/preferences.mjs'
 import { test, expect } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
@@ -54,11 +55,11 @@ test('month changes, leap years and localized mobile calendar', async ({ page })
   await expect(calendar.getByRole('heading', { name: 'January 2026' })).toBeVisible()
   await expect(calendar.getByText('No workouts recorded this month yet.')).toBeVisible()
   for (const language of ['en', 'ja', 'es', 'zh']) {
-    await page.locator('.settings select').first().selectOption(language)
+    await selectPreference(page, 'language', language)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await expect(calendar.locator('.calendar-weekdays > span')).toHaveCount(7)
   }
-  await page.locator('.settings select').first().selectOption('en')
+  await selectPreference(page, 'language', 'en')
   await calendar.getByRole('button', { name: 'Today', exact: true }).click()
   await calendar.screenshot({ path: 'test-results/mobile-calendar.png', animations: 'disabled' })
 })

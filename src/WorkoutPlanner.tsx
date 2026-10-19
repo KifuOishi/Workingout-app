@@ -31,6 +31,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
   const [discarding, setDiscarding] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [removeItemId, setRemoveItemId] = useState<string | null>(null)
   const [addingExercise, setAddingExercise] = useState(false)
   const [addCategory, setAddCategory] = useState<Category>('胸')
   const [addExercise, setAddExercise] = useState('ベンチプレス')
@@ -148,6 +149,15 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
     if (!session) return
     commit({ ...state, session: { ...session, setRows: { ...session.setRows, [itemId]: session.setRows[itemId].map(row => row.id === setId ? { ...row, ...patch } : row) } } })
   }
+  function removeFromSession(itemId: string) {
+    if (!session) return
+    const setRows = { ...session.setRows }
+    delete setRows[itemId]
+    if (commit({ ...state, session: { ...session, items: session.items.filter(item => item.id !== itemId), completed: session.completed.filter(id => id !== itemId), setRows } })) {
+      setRemoveItemId(null)
+      setFinishing(false)
+    }
+  }
   function toggleSet(itemId: string, setId: string, timestamp: number) {
     if (!session) return
     armSound()
@@ -238,7 +248,8 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
           const fromIndex = session.items.findIndex(exercise => exercise.id === from)
           const toIndex = session.items.findIndex(exercise => exercise.id === to)
           if (fromIndex >= 0 && toIndex >= 0) commit({ ...state, session: { ...session, items: moveItem(session.items, fromIndex, toIndex - fromIndex) } })
-        }} /><button className="order-button" aria-label={t('moveUp') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === 0} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, -1) } })}>&#8593;</button><button className="order-button" aria-label={t('moveDown') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === session.items.length - 1} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, 1) } })}>&#8595;</button><span className="count">{rows.filter(row => row.done).length} / {rows.length}</span></div></div>
+        }} /><button className="order-button" aria-label={t('moveUp') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === 0} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, -1) } })}>&#8593;</button><button className="order-button" aria-label={t('moveDown') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === session.items.length - 1} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, 1) } })}>&#8595;</button><button type="button" className="text-button" aria-label={t('removeExercise') + ': ' + exerciseLabel(item.exercise, language)} onClick={() => setRemoveItemId(item.id)}>{t('removeExercise')}</button><span className="count">{rows.filter(row => row.done).length} / {rows.length}</span></div></div>
+          {removeItemId === item.id && <div className="planner-confirm" role="alert"><p>{t('removeExerciseConfirm')}</p><button type="button" className="secondary" onClick={() => removeFromSession(item.id)}>{t('removeExercise')}</button><button type="button" className="text-button" onClick={() => setRemoveItemId(null)}>{t('cancel')}</button></div>}
           <div className="set-table-heading" aria-hidden="true"><span>{t('set')}</span><span>{t('previous')}</span><span>{unit}</span><span>{t('reps')}</span><span>✓</span></div>
           {rows.map((row, index) => {
             const prev = previous?.setDetails ? previous.setDetails[index] : previous && index < previous.sets ? previous : undefined

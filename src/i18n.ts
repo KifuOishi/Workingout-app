@@ -2,6 +2,8 @@ export type Language = 'en' | 'ja' | 'es' | 'zh'
 export type Unit = 'kg' | 'lb'
 export const locales = { en: 'en-US', ja: 'ja-JP', es: 'es-ES', zh: 'zh-CN' }
 export const messages = {
+  removeExercise: ['Remove exercise', '種目を削除', 'Quitar ejercicio', '移除动作'],
+  removeExerciseConfirm: ['Remove this exercise from today’s workout? Any sets entered for it will also be removed. Your template will stay the same.', 'この種目を今日のワークアウトから削除しますか？入力済みのセットも削除されます。テンプレートは変更されません。', '¿Quitar este ejercicio del entrenamiento de hoy? También se quitarán sus series introducidas. La plantilla no cambiará.', '从今天的训练中移除此动作？已输入的组也会被移除，模板保持不变。'],
   exerciseTrends: ['Exercise trends', '種目別の成長グラフ', 'Evolución por ejercicio', '各动作进步图表'],
   monthlyReview: ['This month so far', '今月の振り返り', 'Este mes hasta hoy', '本月回顾'],
   samePeriod: ['Compared with the same period last month', '先月の同じ期間と比較', 'Comparado con el mismo período del mes pasado', '与上月同期比较'],

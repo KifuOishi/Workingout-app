@@ -46,6 +46,7 @@ test('finishing a workout does not leave a stale planner notice on templates', a
   await page.locator('.session-add-form button[type="submit"]').click()
   await page.locator('#current-workout').getByRole('checkbox').check()
   await page.locator('#current-workout').getByRole('button', { name: 'Finish & save to history', exact: true }).click()
+  await page.locator('.finish-choice').getByRole('button', { name: 'Finish & save to history', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await page.getByRole('link', { name: 'Templates', exact: true }).click()
   await expect(page.locator('.notice')).toHaveCount(0)

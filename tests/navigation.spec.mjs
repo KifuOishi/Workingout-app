@@ -47,6 +47,7 @@ test('start empty, add existing and custom exercises, navigate with a running ti
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await active.getByRole('checkbox').nth(1).check()
   await active.getByRole('button', { name: 'Finish & save to history' }).click()
+  await active.locator('.finish-choice').getByRole('button', { name: 'Finish & save to history', exact: true }).click()
   await expect(page).toHaveURL(/#\/history$/)
   await expect(page.locator('.history .record')).toHaveCount(2)
   await expect(page.locator('#record-form')).toHaveCount(0)

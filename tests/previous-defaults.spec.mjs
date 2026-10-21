@@ -17,7 +17,7 @@ test('previous values are subdued, editable, checkable and usable when completin
   await expect(weight).toHaveClass('suggested-value')
   await page.getByLabel('Weight unit', { exact: true }).selectOption('lb')
   await expect(weight).toHaveCount(0)
-  await expect(active.getByRole('spinbutton', { name: 'Weight 1 (lb)', exact: true })).toHaveValue('110.231131')
+  await expect(active.getByRole('spinbutton', { name: 'Weight 1 (lb)', exact: true })).toHaveValue('110.23')
   await page.getByLabel('Weight unit', { exact: true }).selectOption('kg')
   await weight.fill('55')
   await expect(weight).not.toHaveClass('suggested-value')

@@ -124,9 +124,10 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
   function addToSession(e: FormEvent) {
     e.preventDefault()
     if (!session || !addExercise || !exercises.some(item => item.name === addExercise && item.category === addCategory)) return
-    const item: PlanItem = { id: crypto.randomUUID(), exercise: addExercise, category: addCategory, weight: 20, reps: 10, sets: 1, note: '' }
+    const defaultWeight = toKg(unit === 'lb' ? 40 : 20, unit)
+    const item: PlanItem = { id: crypto.randomUUID(), exercise: addExercise, category: addCategory, weight: defaultWeight, reps: 10, sets: 1, note: '' }
     const hasPrevious = !!previousWorkout(records, item, session)
-    const row: SessionSet = { id: crypto.randomUUID(), weight: hasPrevious ? null : 20, reps: hasPrevious ? null : 10, done: false, restSeconds: session.restSeconds }
+    const row: SessionSet = { id: crypto.randomUUID(), weight: hasPrevious ? null : defaultWeight, reps: hasPrevious ? null : 10, done: false, restSeconds: session.restSeconds }
     if (commit({ ...state, session: { ...session, items: [...session.items, item], setRows: { ...session.setRows, [item.id]: [row] } } })) setAddingExercise(false)
   }
   function addItem() {
@@ -197,8 +198,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
   }
   function finish() {
     if (!session || session.items.length === 0) return
-    if (Object.values(session.setRows).some(rows => rows.some(row => !row.done))) { setFinishing(true); return }
-    saveWorkout(false)
+    setFinishing(true)
   }
   function saveWorkout(completeAll: boolean) {
     if (!session) return
@@ -236,7 +236,8 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
     {page === 'workout' && error && <p role="alert" className="error">{t(error)}</p>}
     {page === 'workout' && session && <section id="current-workout" className="current-workout panel live-workout">
       <div className="live-toolbar"><div><span className="eyebrow">{t('activeWorkout')} · {session.date}</span><h2>{session.name === '__repeat__' ? t('repeatWorkout') : session.name === '__empty__' ? t('emptyWorkout') : session.name}</h2></div><div className="live-toolbar-end"><span className="live-rest-count">{t('restInterval')} {String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:{String(secondsLeft % 60).padStart(2, '0')}</span><span aria-label={t('elapsed')} className="elapsed">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</span><button className="primary" disabled={allSets.length === 0} onClick={finish}>{t('finishWorkout')}</button></div></div>
-      {finishing && <section className="finish-choice" aria-label={t('unfinishedSets')}><h3>{t('unfinishedSets')}</h3><p>{allSets.length - doneSets} {t('sets')} ? {t('unfinishedHint')}</p><div className="finish-options"><div><button className="primary" onClick={() => saveWorkout(false)}>{t('saveCompletedOnly')}</button><p>{t('saveCompletedHint')}</p></div><div><button className="secondary" onClick={() => saveWorkout(true)}>{t('completeRemaining')}</button><p>{t('completeRemainingHint')}</p></div></div><button className="text-button" onClick={() => { setFinishing(false); setError(null) }}>{t('cancel')}</button></section>}
+      {finishing && doneSets === allSets.length && <section className="finish-choice" aria-label={t('finishConfirm')}><h3>{t('finishConfirm')}</h3><button className="primary" onClick={() => saveWorkout(false)}>{t('finishWorkout')}</button><button className="text-button" onClick={() => { setFinishing(false); setError(null) }}>{t('cancel')}</button></section>}
+      {finishing && doneSets < allSets.length && <section className="finish-choice" aria-label={t('unfinishedSets')}><h3>{t('unfinishedSets')}</h3><p>{allSets.length - doneSets} {t('sets')} ? {t('unfinishedHint')}</p><div className="finish-options"><div><button className="primary" onClick={() => saveWorkout(false)}>{t('saveCompletedOnly')}</button><p>{t('saveCompletedHint')}</p></div><div><button className="secondary" onClick={() => saveWorkout(true)}>{t('completeRemaining')}</button><p>{t('completeRemainingHint')}</p></div></div><button className="text-button" onClick={() => { setFinishing(false); setError(null) }}>{t('cancel')}</button></section>}
       <div className="live-progress"><span>{doneSets} / {allSets.length} {t('sets')} · {t('completed')}</span><progress value={doneSets} max={allSets.length || 1} /><span className="progress-rest">{t('restInterval')} <strong>{String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:{String(secondsLeft % 60).padStart(2, '0')}</strong></span></div>
       <div className="session-exercise-actions"><button className="secondary" onClick={() => setAddingExercise(!addingExercise)}>{t('addPlanItem')}</button></div>
       {addingExercise && <form className="session-add-form panel" onSubmit={addToSession}><h3>{t('addPlanItem')}</h3><ExercisePicker category={addCategory} exercise={addExercise} exercises={exercises} language={language} t={t} onChange={(category, name) => { setAddCategory(category); setAddExercise(name) }} onAdd={(category, name, equipment) => { const result = onAddExercise(category, name, equipment); if (!result) { setAddCategory(category); setAddExercise(name) } return result }} /><div className="planner-actions"><button type="submit" className="primary">{t('sessionAdd')}</button><button type="button" className="text-button" onClick={() => setAddingExercise(false)}>{t('cancel')}</button></div></form>}
@@ -259,7 +260,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
               <SetTypePicker value={row.type ?? 'normal'} index={index + 1} disabled={row.done} t={t} onChange={type => updateSet(item.id, row.id, { type })} />
               <div className="compact-previous" title={previous ? new Date(previous.date + 'T00:00:00').toLocaleDateString(locales[language]) : undefined}><span className="previous-set">{prev ? num(fromKg(signedWeight(item.exercise, prev.weight), unit)) + ' ' + unit + ' × ' + prev.reps : '—'}</span></div>
               <div className="set-card-fields">
-                <label>{t('weight')} <span className="field-unit">{unit}</span><input className={!row.done && row.weightSource === 'previous' ? 'suggested-value' : undefined} aria-label={t('weight') + ' ' + (index + 1) + ' (' + unit + ')'} type="number" min={isAssisted(item.exercise) ? undefined : 0} max={isAssisted(item.exercise) ? 0 : undefined} step="any" inputMode="decimal" disabled={row.done} value={row.weight === null ? '' : +fromKg(signedWeight(item.exercise, row.weight), unit).toFixed(6)} onChange={e => updateSet(item.id, row.id, { weightSource: 'manual', weight: e.target.value === '' ? null : Math.abs(toKg(+e.target.value, unit)) })} /></label>
+                <label>{t('weight')} <span className="field-unit">{unit}</span><input className={!row.done && row.weightSource === 'previous' ? 'suggested-value' : undefined} aria-label={t('weight') + ' ' + (index + 1) + ' (' + unit + ')'} type="number" min={isAssisted(item.exercise) ? undefined : 0} max={isAssisted(item.exercise) ? 0 : undefined} step="any" inputMode="decimal" onFocus={e => e.currentTarget.select()} onClick={e => e.currentTarget.select()} disabled={row.done} value={row.weight === null ? '' : +fromKg(signedWeight(item.exercise, row.weight), unit).toFixed(2)} onChange={e => updateSet(item.id, row.id, { weightSource: 'manual', weight: e.target.value === '' ? null : Math.abs(toKg(+e.target.value, unit)) })} /></label>
                 <label>{t('reps')}<input className={!row.done && row.repsSource === 'previous' ? 'suggested-value' : undefined} aria-label={t('reps') + ' ' + (index + 1)} type="number" min="1" step="1" inputMode="numeric" disabled={row.done} value={row.reps ?? ''} onChange={e => updateSet(item.id, row.id, { repsSource: 'manual', reps: e.target.value === '' ? null : Math.max(1, Math.floor(+e.target.value)) })} /></label>
               </div>
               <label className="set-check"><input type="checkbox" aria-label={exerciseLabel(item.exercise, language) + ' ' + t('set') + ' ' + (index + 1)} checked={row.done} disabled={row.weight === null || row.reps === null} onChange={() => toggleSet(item.id, row.id, Date.now())} /><span aria-hidden="true">✓</span></label>

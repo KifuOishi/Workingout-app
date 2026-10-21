@@ -73,7 +73,7 @@ test('mark unperformed sets complete saves all entered sets without changing tem
   expect(records[0].durationSeconds).toBe(records[1].durationSeconds)
 })
 
-test('all completed sets save immediately and an empty completion cannot be saved', async ({ page }) => {
+test('all completed sets require confirmation and an empty completion cannot be saved', async ({ page }) => {
   const active = await begin(page)
   await active.getByRole('button', { name: 'Finish & save to history' }).click()
   await active.getByRole('button', { name: 'Remove unfinished sets & save', exact: true }).click()
@@ -81,6 +81,14 @@ test('all completed sets save immediately and an empty completion cannot be save
   await active.locator('.finish-choice').getByRole('button', { name: 'Cancel', exact: true }).click()
   for (const checkbox of await active.getByRole('checkbox').all()) await checkbox.check()
   await active.getByRole('button', { name: 'Finish & save to history' }).click()
+  const confirmation = active.locator('.finish-choice')
+  await expect(confirmation).toContainText('Are you sure you want to finish this workout?')
+  await expect(page.getByRole('dialog', { name: 'Workout complete', exact: true })).toHaveCount(0)
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(active.getByRole('checkbox').first()).toBeChecked()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('workingout.planner.v1')).session)).not.toBeNull()
+  await active.getByRole('button', { name: 'Finish & save to history' }).click()
+  await confirmation.getByRole('button', { name: 'Finish & save to history', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Workout complete', exact: true })).toBeVisible()
   await expect(page.locator('.finish-choice')).toHaveCount(0)
 })

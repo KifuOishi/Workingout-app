@@ -108,6 +108,7 @@ export const messages = {
   startWorkout: ['Start workout', 'ワークアウトを開始', 'Iniciar entrenamiento', '开始训练'],
   activeWorkout: ['Current workout', '実施中のワークアウト', 'Entrenamiento en curso', '当前训练'],
   completed: ['Completed', '完了', 'Completado', '已完成'],
+  finishConfirm: ['Are you sure you want to finish this workout?', '本当にワークアウトを終了しますか？', '¿Seguro que quieres finalizar este entrenamiento?', '确定要结束本次训练吗？'],
   finishWorkout: ['Finish & save to history', '終了して履歴に保存', 'Finalizar y guardar en el historial', '完成并保存到历史'],
   finishHint: ['Check off every exercise to finish and save.', 'すべての種目をチェックすると、終了して履歴に保存できます。', 'Marca todos los ejercicios para finalizar y guardar.', '勾选全部动作后即可完成并保存。'],
   discardWorkout: ['Discard workout', 'ワークアウトを破棄', 'Descartar entrenamiento', '放弃训练'],

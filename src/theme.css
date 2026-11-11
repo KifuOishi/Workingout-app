@@ -47,6 +47,12 @@ label, .hint, .optional, .record-note, .metrics, .analytics-caption, .set-table-
 .metrics strong { color: #eee5d3; }
 .filter, .preferences-panel, .custom-exercise, .history-reflection, .workout-reflection { background: #1b2a42; border-color: var(--line); }
 .live-workout, .workout-welcome, .planner-empty, .empty { background: #142138; border-color: var(--line); }
+.planner-confirm { background: #22314b; border-color: #8b784f; color: var(--ink); }
+.planner-confirm p { color: var(--ink); }
+.planner-confirm .text-button { color: #f0d9a8; }
+.delete-confirm { background: #482d35; color: #ffe4df; border: 1px solid #98636d; border-radius: 10px; padding: 16px; }
+.delete-confirm > span { color: #ffe4df; line-height: 1.8; }
+.delete-confirm button { background: #24344e; color: var(--ink); }
 .set-card, .history-edit-sets fieldset { background: #192840; border-color: var(--line); }
 .live-workout .set-check { width: 44px; height: 44px; }
 .set-check span { background: #253651; border-color: #52627b; color: #b6c2d5; }
@@ -69,6 +75,8 @@ label, .hint, .optional, .record-note, .metrics, .analytics-caption, .set-table-
 [data-set-type=drop] { --type-ink: #cbb2ee; --type-fill: #362c4b; }
 .notice:not(:empty) { background: #22374a; color: #cfddd9; }
 .error { background: #482d35; color: #ffc2b4; }
+.custom-exercise .exercise-error { color: #ffc2b4; }
+.backup-replace { background: #482d35; color: #ffe4df; border: 1px solid #98636d; }
 .delete-confirm .danger { background: #964c54; color: #fff; }
 @media (max-width: 650px) {
   .page-nav { background: #101c30f5; border-top-color: #d6bc8033; }

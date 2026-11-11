@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import './polish.css'
+import './theme.css'
 import Icon from './Icon'
 import WorkoutCalendar from './WorkoutCalendar'
 import WorkoutSummary from './WorkoutSummary'
@@ -95,6 +96,7 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
   const [sets, setSets] = useState('3')
   const [note, setNote] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
+  const [editSets, setEditSets] = useState<{ weight: number | null; reps: string; type?: SetDetail['type'] }[]>([])
   const [deleting, setDeleting] = useState<string | null>(null)
   const planner = useRef<PlannerHandle>(null)
   function save(next: Workout[], message: MessageKey) {
@@ -103,12 +105,14 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
   }
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!exercise.trim() || !date || weightKg === null || !Number.isFinite(weightKg) || weightKg < 0 || !Number.isInteger(+reps) || +reps < 1 || !Number.isInteger(+sets) || +sets < 1) { setError('invalid'); return }
+    const details = editing ? editSets.map(set => ({ weight: set.weight!, reps: +set.reps, ...(set.type ? { type: set.type } : {}) })) : undefined
+    if (!exercise.trim() || !date || (editing ? !details?.length || editSets.some(set => set.weight === null || !Number.isFinite(set.weight) || set.weight < 0 || !Number.isInteger(+set.reps) || +set.reps < 1 || +set.reps > 10000) : weightKg === null || !Number.isFinite(weightKg) || weightKg < 0 || !Number.isInteger(+reps) || +reps < 1 || !Number.isInteger(+sets) || +sets < 1)) { setError('invalid'); return }
     const previous = records.find(record => record.id === editing)
-    const record: Workout = { id: editing ?? crypto.randomUUID(), date, exercise: exercise.trim(), weight: weightKg, reps: +reps, sets: +sets, note: note.trim(), category, workoutId: previous?.workoutId, workoutName: previous?.workoutName, durationSeconds: previous?.durationSeconds, finishedAt: previous?.finishedAt, feeling: previous?.feeling, workoutNote: previous?.workoutNote }
+    const record: Workout = { id: editing ?? crypto.randomUUID(), date, exercise: exercise.trim(), weight: details?.[0].weight ?? weightKg!, reps: details?.[0].reps ?? +reps, sets: details?.length ?? +sets, ...(details ? { setDetails: details } : {}), note: note.trim(), category, workoutId: previous?.workoutId, workoutName: previous?.workoutName, durationSeconds: previous?.durationSeconds, finishedAt: previous?.finishedAt, feeling: previous?.feeling, workoutNote: previous?.workoutNote }
     if (save(editing ? records.map(r => r.id === editing ? record : r) : [...records, record], editing ? 'updated' : 'added')) { setEditing(null); setNote('') }
   }
-  function edit(r: Workout) { setEditing(r.id); setDate(r.date); setExercise(r.exercise); setCategory(r.category ?? catalog.find(e => e.name === r.exercise)?.category ?? 'その他'); setWeightKg(r.weight); setReps(String(r.reps)); setSets(String(r.sets)); setNote(r.note); setNotice(null); document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth' }) }
+  function edit(r: Workout) { setEditSets((r.setDetails ?? Array.from({ length: r.sets }, () => ({ weight: r.weight, reps: r.reps }))).map(set => ({ ...set, reps: String(set.reps) }))); setEditing(r.id); setDate(r.date); setExercise(r.exercise); setCategory(r.category ?? catalog.find(e => e.name === r.exercise)?.category ?? 'その他'); setWeightKg(r.weight); setReps(String(r.reps)); setSets(String(r.sets)); setNote(r.note); setNotice(null) }
+  useEffect(() => { if (editing) document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, [editing])
   const visible = records.filter(r => !filter || r.date === filter).sort((a, b) => b.date.localeCompare(a.date))
   const dates = [...new Set(visible.map(r => r.date))]
   const current = records.filter(r => r.date === today())
@@ -145,11 +149,18 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
             <form onSubmit={submit}>
               <label>{t('date')}<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
               <ExercisePicker category={category} exercise={exercise} exercises={catalog} language={language} t={t} onChange={(part, name) => { setCategory(part); setExercise(name) }} onAdd={addExercise} />
-              <div className="number-fields">
+              {editing ? <div className="history-edit-sets">{editSets.map((set, index) => <fieldset key={index}>
+                <legend>{t('set')} {index + 1}{set.type && set.type !== 'normal' ? ` (${t(set.type)})` : ''}</legend>
+                <div className="number-fields">
+                  <label>{t('weight')} ({unit})<input type="number" min={isAssisted(exercise) ? undefined : 0} max={isAssisted(exercise) ? 0 : undefined} step="any" inputMode="decimal" required value={set.weight === null ? '' : +fromKg(signedWeight(exercise, set.weight), unit).toFixed(6)} onChange={e => setEditSets(rows => rows.map((row, i) => i === index ? { ...row, weight: e.target.value === '' ? null : Math.abs(toKg(+e.target.value, unit)) } : row))} /></label>
+                  <label>{t('reps')}<input type="number" min="1" max="10000" step="1" inputMode="numeric" required value={set.reps} onChange={e => setEditSets(rows => rows.map((row, i) => i === index ? { ...row, reps: e.target.value } : row))} /></label>
+                </div>
+                <button type="button" className="text-button" disabled={editSets.length <= 1} aria-label={`${t('delete')}: ${t('set')} ${index + 1}`} onClick={() => setEditSets(rows => rows.filter((_, i) => i !== index))}>{t('delete')}</button>
+              </fieldset>)}<button type="button" className="secondary" disabled={editSets.length >= 1000} onClick={() => setEditSets(rows => [...rows, { ...rows[rows.length - 1] }])}>{t('addSet')}</button></div> : <div className="number-fields">
                 <label>{t('weight')} ({unit})<input type="number" min={isAssisted(exercise) ? undefined : 0} max={isAssisted(exercise) ? 0 : undefined} step="any" inputMode="decimal" required value={weightKg === null ? '' : +fromKg(signedWeight(exercise, weightKg), unit).toFixed(6)} onChange={e => setWeightKg(e.target.value === '' ? null : Math.abs(toKg(+e.target.value, unit)))} /></label>
                 <label>{t('reps')}<input type="number" min="1" max="10000" step="1" inputMode="numeric" required value={reps} onChange={e => setReps(e.target.value)} /></label>
                 <label>{t('sets')}<input type="number" min="1" max="1000" step="1" inputMode="numeric" required value={sets} onChange={e => setSets(e.target.value)} /></label>
-              </div>
+              </div>}
               <p className="hint">{t('bodyweight')} ({unit}).</p>
               <label>{t('note')} <span className="optional">{t('optional')}</span><textarea rows={3} maxLength={500} value={note} onChange={e => setNote(e.target.value)} placeholder={t('notePlaceholder')} /></label>
               <button className="primary" type="submit">{t(editing ? 'save' : 'addRecord')}</button>

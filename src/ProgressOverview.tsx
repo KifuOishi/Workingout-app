@@ -30,7 +30,7 @@ export default function ProgressOverview({ records, exercises, language, unit, t
   const date = (value: string) => new Date(value + 'T00:00:00').toLocaleDateString(locales[language], { month: 'short', day: 'numeric' })
   const color = (index: number) => {
     const count = data.muscles[index].sets
-    return !count ? '#dce4d5' : count / maximum < .34 ? '#b7d699' : count / maximum < .67 ? '#78a96b' : '#356b4b'
+    return !count ? '#2a3a55' : count / maximum < .34 ? '#40516d' : count / maximum < .67 ? '#9cabc0' : '#d6bf89'
   }
   return <div className="progress-overview">
     <ProgressSection className="monthly-review" title={t('monthlyReview')}>
@@ -48,7 +48,7 @@ export default function ProgressOverview({ records, exercises, language, unit, t
     </ProgressSection>
     <div className="analytics-sections">
       <ProgressSection className="muscle-section" title={t('muscleMap')}><p className="analytics-caption">{t('muscleMapHint')}</p>
-        <div className="body-figures" aria-hidden="true">{[front, back].map((regions, view) => <div key={view}><svg viewBox="0 0 118 226" focusable="false"><circle cx="59" cy="23" r="14" fill="#dce4d5" /><path d="M51 38H67L70 48H48ZM38 106H79L73 115H44Z" fill="#dce4d5" />{regions.map((paths, index) => <g key={index} fill={color(index)} stroke={selected === categories[index] ? '#203f2e' : '#f1f5ec'} strokeWidth={selected === categories[index] ? 2 : 1}>{paths.map(path => <path key={path} d={path} />)}</g>)}<path d="M41 213H52V220H36ZM65 213H76L82 220H65Z" fill="#dce4d5" /></svg><span>{t(view === 0 ? 'frontView' : 'backView')}</span></div>)}</div>
+        <div className="body-figures" aria-hidden="true">{[front, back].map((regions, view) => <div key={view}><svg viewBox="0 0 118 226" focusable="false"><circle cx="59" cy="23" r="14" fill="#2a3a55" /><path d="M51 38H67L70 48H48ZM38 106H79L73 115H44Z" fill="#2a3a55" />{regions.map((paths, index) => <g key={index} fill={color(index)} stroke={selected === categories[index] ? '#e9d5a0' : '#18253b'} strokeWidth={selected === categories[index] ? 2 : 1}>{paths.map(path => <path key={path} d={path} />)}</g>)}<path d="M41 213H52V220H36ZM65 213H76L82 220H65Z" fill="#2a3a55" /></svg><span>{t(view === 0 ? 'frontView' : 'backView')}</span></div>)}</div>
         <div className="muscle-legend"><span>{t('fewerSets')}</span><i /><span>{t('moreSets')}</span></div>
         <div className="muscle-categories">{data.muscles.map((item, index) => <button type="button" key={item.category} aria-pressed={selected === item.category} onClick={() => setSelected(item.category)}><i style={{ background: color(index) }} /><span>{categoryLabel(item.category, language)}</span><strong>{item.sets}</strong></button>)}</div>
         <div className="muscle-detail" aria-live="polite"><strong>{categoryLabel(selected, language)} · {muscle.sets} {t('sets')}</strong><p>{muscle.lastDate ? `${t('lastTrained')}: ${date(muscle.lastDate)}` : t('noRecentSets')}</p></div>

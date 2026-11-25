@@ -23,11 +23,11 @@ async function seed(page) {
   await page.reload()
 }
 
-test('monthly review, interactive muscle map and genuine milestones use recorded working sets', async ({ page }) => {
+test('monthly review, muscle map and downloadable training card use recorded workouts', async ({ page }) => {
   await seed(page)
   await page.setViewportSize({ width: 390, height: 844 })
   const sections = page.locator('.training-progress details')
-  await expect(sections).toHaveCount(4)
+  await expect(sections).toHaveCount(3)
   await expect(page.locator('.training-progress details[open]')).toHaveCount(0)
   const lastTitle = await sections.last().locator('summary').boundingBox()
   const nav = await page.locator('.page-nav').boundingBox()
@@ -48,17 +48,16 @@ test('monthly review, interactive muscle map and genuine milestones use recorded
   await map.getByRole('button', { name: 'Legs 0', exact: true }).click()
   await expect(map.locator('.muscle-detail')).toContainText('No working sets in this period')
   await expect(map.getByRole('button', { name: 'Legs 0', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  const timeline = page.getByRole('region', { name: 'Personal best timeline', exact: true })
-  await page.locator('.milestone-section > summary').click()
-  await expect(timeline.locator('li')).toHaveCount(3)
-  await expect(timeline.locator('li').nth(0)).toContainText('More reps at the same weight')
-  await expect(timeline.locator('li').nth(0)).toContainText('+2 reps')
-  await expect(timeline.locator('li').nth(1)).toContainText('Weight best')
-  await expect(timeline.locator('li').nth(2)).toContainText('Starting point')
+  const card = page.getByRole('region', { name: 'Monthly training card', exact: true })
+  await page.locator('.monthly-card-section > summary').click()
+  await expect(card.locator('dd')).toHaveText(['5', '2', 'Chest'])
+  const downloadPromise = page.waitForEvent('download')
+  await card.getByRole('button', { name: 'Save PNG' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('lift-log-2026-10.png')
+  expect(await download.failure()).toBeNull()
   await selectPreference(page, 'unit', 'lb')
   await expect(review.locator('.month-highlight')).toContainText('+11.02 lb')
-  await expect(timeline.locator('li').nth(0)).toContainText('121.25 lb')
-  await page.locator('.exercise-trends > summary').click()
   for (const language of ['ja', 'es', 'zh', 'en']) {
     await selectPreference(page, 'language', language)
     for (const width of [320, 390, 1440]) {
@@ -75,8 +74,8 @@ test('monthly review, interactive muscle map and genuine milestones use recorded
 test('analytics handles empty history, assisted weight improvements and year boundaries', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-01-31T12:00:00-07:00') })
   await page.goto('/#/progress')
-  await page.locator('.milestone-section > summary').click()
-  await expect(page.getByText('Save a workout to start your timeline.', { exact: true })).toBeVisible()
+  await page.locator('.monthly-card-section > summary').click()
+  await expect(page.locator('.monthly-card-preview dd')).toHaveText(['0', '0', '—'])
   const result = await page.evaluate(async () => {
     const { trainingAnalytics } = await import('/src/analytics.ts')
     const { categories } = await import('/src/exercises.ts')

@@ -9,6 +9,16 @@ test('rest interval fields can be cleared and replaced with single digits', asyn
   const row = active.getByRole('spinbutton', { name: 'Rest interval 1', exact: true })
   const timer = active.locator('.rest-timer input[type="number"]')
   for (const input of [row, timer]) {
+    await input.fill('120')
+    await input.blur()
+    await input.click()
+    await input.press('7')
+    await expect(input).toHaveValue('7')
+    await input.blur()
+    await input.focus()
+    await input.press('8')
+    await expect(input).toHaveValue('8')
+    await input.blur()
     for (const value of ['2', '3', '4', '9', '0']) {
       await input.focus()
       await input.press('ControlOrMeta+A')

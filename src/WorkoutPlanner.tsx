@@ -1,7 +1,8 @@
 import useNotice from './useNotice'
 import ExerciseDragHandle from './ExerciseDragHandle'
 import { isAssisted, signedWeight, equipmentTypes } from './exercises'
-import { bests, sameExercise, moveItem } from './progress'
+import { bests, sameExercise, moveItem, previousSet, setImprovement, improvementLabel } from './progress'
+import type { SetImprovement } from './progress'
 import SetTypePicker from './SetTypePicker'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -19,7 +20,7 @@ import type { Page } from './navigation'
 import { disablePush, enablePush, PushError, pushEnabled, syncRestPush } from './push'
 
 export type PlannerHandle = { repeat: (items: PlanItem[]) => void; empty: () => void; template: (items: WorkoutRecord[]) => void }
-type Props = { page: Page; navigate: (page: Page) => void; onActiveChange: (active: boolean) => void; onAddExercise: (category: Category, name: string, equipment?: Equipment) => MessageKey | null; language: Language; unit: Unit; t: Translate; exercises: Exercise[]; records: (PlanItem & { date: string })[]; onFinish: (records: ReturnType<typeof completedRecords>) => boolean }
+type Props = { page: Page; navigate: (page: Page) => void; onActiveChange: (active: boolean) => void; onAddExercise: (category: Category, name: string, equipment?: Equipment) => MessageKey | null; language: Language; unit: Unit; t: Translate; exercises: Exercise[]; records: (PlanItem & { date: string })[]; onFinish: (records: ReturnType<typeof completedRecords>, improvements: Map<string, SetImprovement[]>) => boolean }
 
 const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner({ page, navigate, onActiveChange, onAddExercise, language, unit, t, exercises, records, onFinish }, ref) {
   const [initial] = useState(readPlanner)
@@ -48,7 +49,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
     return { ...current, setRows: Object.fromEntries(current.items.map(item => {
       const previous = previousWorkout(records, item, current)
       return [item.id, current.setRows[item.id].map((row, index) => {
-        const prev = previous?.setDetails ? previous.setDetails[index] : previous && index < previous.sets ? previous : undefined
+        const prev = previousSet(previous, index)
         if (!prev || row.done) return row
         return { ...row,
           ...(row.weight === null && row.weightSource !== 'manual' ? { weight: prev.weight, weightSource: 'previous' as const } : {}),
@@ -207,8 +208,17 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
     const finalSession = completeAll ? { ...session, setRows: Object.fromEntries(Object.entries(session.setRows).map(([id, sets]) => [id, sets.map(set => ({ ...set, done: true }))])) } : session
     const results = completedRecords(finalSession)
     if (results.length === 0) { setError('noCompletedSets'); return }
+    const improvements = new Map<string, SetImprovement[]>()
+    for (const item of finalSession.items) {
+      const previous = previousWorkout(records, item, session)
+      const gains = finalSession.setRows[item.id].flatMap((row, index) => {
+        const gain = row.done && setImprovement(item.exercise, row, previousSet(previous, index))
+        return gain ? [gain] : []
+      })
+      if (gains.length) improvements.set(`session-${session.id}-${item.id}`, gains)
+    }
     // Stable record IDs make retry safe if saving history succeeds but clearing progress fails.
-    if (onFinish(results) && commit({ ...state, session: null })) { setFinishing(false); setNotice(null); setDiscarding(false); setAddingExercise(false); navigate('history') }
+    if (onFinish(results, improvements) && commit({ ...state, session: null })) { setFinishing(false); setNotice(null); setDiscarding(false); setAddingExercise(false); navigate('history') }
   }
   const secondsLeft = timer ? Math.ceil(remainingTime(timer, now) / 1000) : 0
   const allSets = session ? Object.values(session.setRows).flat() : []
@@ -251,9 +261,11 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
           if (fromIndex >= 0 && toIndex >= 0) commit({ ...state, session: { ...session, items: moveItem(session.items, fromIndex, toIndex - fromIndex) } })
         }} /><button className="order-button" aria-label={t('moveUp') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === 0} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, -1) } })}>&#8593;</button><button className="order-button" aria-label={t('moveDown') + ': ' + exerciseLabel(item.exercise, language)} disabled={itemIndex === session.items.length - 1} onClick={() => commit({ ...state, session: { ...session, items: moveItem(session.items, itemIndex, 1) } })}>&#8595;</button><button type="button" className="text-button" aria-label={t('removeExercise') + ': ' + exerciseLabel(item.exercise, language)} onClick={() => setRemoveItemId(item.id)}>{t('removeExercise')}</button><span className="count">{rows.filter(row => row.done).length} / {rows.length}</span></div></div>
           {removeItemId === item.id && <div className="planner-confirm" role="alert"><p>{t('removeExerciseConfirm')}</p><button type="button" className="secondary" onClick={() => removeFromSession(item.id)}>{t('removeExercise')}</button><button type="button" className="text-button" onClick={() => setRemoveItemId(null)}>{t('cancel')}</button></div>}
+          {previous && <p className="previous-summary">{t('previous')} · <time dateTime={previous.date}>{new Date(previous.date + 'T00:00:00').toLocaleDateString(locales[language])}</time></p>}
           <div className="set-table-heading" aria-hidden="true"><span>{t('set')}</span><span>{t('previous')}</span><span>{unit}</span><span>{t('reps')}</span><span>✓</span></div>
           {rows.map((row, index) => {
-            const prev = previous?.setDetails ? previous.setDetails[index] : previous && index < previous.sets ? previous : undefined
+            const prev = previousSet(previous, index)
+            const gain = row.done && setImprovement(item.exercise, row, prev)
             const best = bests(records.filter(record => sameExercise(record, item)))
             const pr = row.done && row.type !== 'warmup' && (best.count === 0 || signedWeight(item.exercise, row.weight!) > best.weight || row.reps! > best.reps)
             return <div className={row.done ? 'set-entry set-complete' : 'set-entry'} key={row.id}>
@@ -265,6 +277,7 @@ const WorkoutPlanner = forwardRef<PlannerHandle, Props>(function WorkoutPlanner(
               </div>
               <label className="set-check"><input type="checkbox" aria-label={exerciseLabel(item.exercise, language) + ' ' + t('set') + ' ' + (index + 1)} checked={row.done} disabled={row.weight === null || row.reps === null} onChange={() => toggleSet(item.id, row.id, Date.now())} /><span aria-hidden="true">✓</span></label>
               {pr && <span className="pr-badge" role="status">{t('newPR')}</span>}
+              {gain && <span className="previous-gain" role="status">{improvementLabel(gain, language, unit, t)}</span>}
               <div className="set-card-footer"><label className="set-rest">{t('restInterval')}<RestInput label={t('restInterval') + ' ' + (index + 1)} value={row.restSeconds} onChange={value => updateSet(item.id, row.id, { restSeconds: value })} /><small>{t('seconds')}</small></label>
                 <button type="button" className="remove-set" aria-label={t('removeSet') + ' ' + (index + 1)} disabled={row.done || rows.length <= 1} onClick={() => commit({ ...state, session: { ...session, completed: session.completed.filter(id => id !== item.id), setRows: { ...session.setRows, [item.id]: rows.filter(set => set.id !== row.id) } } })}>×</button>
               </div>

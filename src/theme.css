@@ -1,4 +1,4 @@
-﻿/* Midnight navy with restrained champagne-gold accents. */
+/* Midnight navy with restrained champagne-gold accents. */
 :root {
   color-scheme: dark;
   --paper: #0d1628;
@@ -38,7 +38,7 @@ h1, .home-start h2 { font-family: Georgia, 'Yu Mincho', 'Hiragino Mincho ProN', 
 .secondary, .actions button, .delete-confirm button { background: #24344e; color: #e0d2b4; }
 .secondary:hover, .actions button:hover { background: #30425e; }
 .text-button { color: #dbc493; }
-.shortcut-icon, .milestone-symbol { background: #d6bc8014; color: var(--gold); }
+.shortcut-icon { background: #d6bc8014; color: var(--gold); }
 .shortcut-card:hover { background: #1c2d47; border-color: #8b784f; }
 input, textarea, select, .settings select, .filter input { background: #101c30; border-color: #3d4d68; color: var(--ink); }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -50,6 +50,24 @@ label, .hint, .optional, .record-note, .metrics, .analytics-caption, .set-table-
 .planner-confirm { background: #22314b; border-color: #8b784f; color: var(--ink); }
 .planner-confirm p { color: var(--ink); }
 .planner-confirm .text-button { color: #f0d9a8; }
+.finish-choice { background: var(--mist); border-color: var(--gold); }
+.finish-choice h3 { color: var(--ink); line-height: 1.5; }
+.finish-choice h3 + .primary { margin-top: 12px; }
+.finish-choice > p, .finish-options p { color: var(--ink); font-size: 13px; }
+.finish-options > div { background: var(--silver); }
+.finish-options .secondary { border: 1px solid var(--muted); }
+.previous-gain { color: #b8efd2; background: #214237; border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+.live-workout .set-entry .previous-gain { grid-column: 1 / -1; justify-self: end; }
+.summary-challenge { background: #1b352f; border: 1px solid #527d6c; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.summary-challenge ul { display: grid; gap: 8px; list-style: none; padding: 0; margin: 8px 0 0; }
+.summary-challenge li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; overflow-wrap: anywhere; }
+.summary-challenge li span { color: #b8efd2; font-size: 13px; }
+.monthly-card-preview { max-width: 480px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(145deg, #263b5c, #101c30); margin-bottom: 12px; }
+.monthly-card-preview time { color: var(--gold); font-weight: 650; }
+.monthly-card-preview dl { display: grid; gap: 8px; margin: 12px 0 0; }
+.monthly-card-preview dl > div { background: var(--silver); border-radius: 8px; padding: 10px 12px; }
+.monthly-card-preview dt { color: #c2cde0; font-size: 12px; }
+.monthly-card-preview dd { margin: 4px 0 0; font-size: 20px; font-weight: 750; overflow-wrap: anywhere; }
 .delete-confirm { background: #482d35; color: #ffe4df; border: 1px solid #98636d; border-radius: 10px; padding: 16px; }
 .delete-confirm > span { color: #ffe4df; line-height: 1.8; }
 .delete-confirm button { background: #24344e; color: var(--ink); }
@@ -64,7 +82,7 @@ label, .hint, .optional, .record-note, .metrics, .analytics-caption, .set-table-
 .monthly-review, .training-progress .monthly-review { background: linear-gradient(120deg, #1c2e4a, #283b59); border-color: #6f62484d; color: #f6f1e6; }
 .monthly-review .analytics-caption, .review-period, .review-metrics > div > span:first-child { color: #bfcbdd; }
 .review-delta[data-direction=up] { color: #e7cc91; }
-.training-progress .progress-disclosure, .muscle-section, .milestone-section { background: #18263d; border-color: var(--line); }
+.training-progress .progress-disclosure, .muscle-section { background: #18263d; border-color: var(--line); }
 .training-progress .monthly-review { background: linear-gradient(120deg, #1c2e4a, #283b59); }
 .summary-modal .summary-heading, .workout-summary { background: #1b2b44; border-color: var(--line); }
 .workout-summary.summary-modal, .set-type-popup { color: var(--ink); }

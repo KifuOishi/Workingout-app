@@ -1,4 +1,3 @@
-import { selectPreference } from './helpers/preferences.mjs'
 import { test, expect } from '@playwright/test'
 
 async function seed(page) {
@@ -15,21 +14,25 @@ async function seed(page) {
   await page.reload()
 }
 
-test('progress chart orders workouts, excludes warmups, converts units and marks PRs', async ({ page }) => {
+test('challenge compares the matching set and summarizes gains after saving', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-15T12:00:00') })
   await seed(page)
   await page.setViewportSize({ width: 375, height: 812 })
-  await page.getByRole('link', { name: 'Progress', exact: true }).click()
-  await page.locator('.exercise-trends > summary').click()
-  const progress = page.locator('.training-progress')
-  await expect(progress.locator('.pr-stats')).toContainText('60 kg')
-  await expect(progress.locator('tbody tr')).toHaveCount(2)
-  await expect(progress.locator('tbody tr').first()).toContainText('2026-10-12')
-  await expect(progress.locator('.progress-chart circle')).toHaveCount(2)
-  await selectPreference(page, 'unit', 'lb')
-  await expect(progress.locator('.pr-stats')).toContainText('132.28 lb')
-  await progress.getByRole('combobox').nth(1).selectOption('reps')
-  await expect(progress.getByRole('img')).toHaveAttribute('aria-label', /reps/)
-  await page.getByRole('link', { name: 'History', exact: true }).click()
+  await page.getByRole('link', { name: 'Templates', exact: true }).click()
+  await page.getByRole('button', { name: 'Start workout', exact: true }).click()
+  const active = page.locator('#current-workout')
+  const press = active.locator('.live-exercise').first()
+  await expect(press.locator('.previous-set').first()).toHaveText('60 kg × 10')
+  await press.getByRole('spinbutton', { name: 'reps 1', exact: true }).fill('11')
+  await press.getByRole('checkbox').first().check()
+  await expect(press.locator('.previous-gain')).toHaveText('Over last time +1 rep')
+  await active.getByRole('button', { name: 'Finish & save to history', exact: true }).click()
+  await active.getByRole('button', { name: 'Remove unfinished sets & save', exact: true }).click()
+  const summary = page.locator('.summary-challenge')
+  await expect(summary).toContainText('Beat your last workout')
+  await expect(summary).toContainText('Press')
+  await expect(summary).toContainText('Over last time +1 rep')
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await expect(page.locator('.record').filter({ hasText: '999' }).locator('.pr-badge')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

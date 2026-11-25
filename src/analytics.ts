@@ -54,12 +54,16 @@ export function trainingAnalytics(records: WorkoutRecord[], exercises: Exercise[
   const current = records.filter(row => row.date >= monthStart && row.date <= today)
   const previous = records.filter(row => row.date >= previousStart && row.date <= previousEnd)
   const recent = records.filter(row => row.date >= recentStart && row.date <= today)
+  const categoryOf = (row: WorkoutRecord) => row.category ?? exercises.find(exercise => exercise.name === row.exercise)?.category ?? categories[6]
   const muscles = categories.map(category => {
-    const matching = recent.filter(row => (row.category ?? exercises.find(exercise => exercise.name === row.exercise)?.category ?? categories[6]) === category && workingSets(row).length)
+    const matching = recent.filter(row => categoryOf(row) === category && workingSets(row).length)
     return { category, sets: aggregate(matching).sets, lastDate: matching.map(row => row.date).sort().at(-1) }
   })
   const timeline = milestones(records, today)
   const gains = timeline.filter(event => event.date >= monthStart && event.kind === 'weight')
   const highlight = [...gains].sort((a, b) => b.gain - a.gain)[0]
-  return { current: aggregate(current), previous: aggregate(previous), monthStart, previousStart, previousEnd, today, recentStart, muscles, timeline, highlight, newBests: timeline.filter(event => event.date >= monthStart && event.kind !== 'first').length }
+  const monthMuscles = categories.map(category => ({ category, sets: aggregate(current.filter(row => categoryOf(row) === category)).sets }))
+  const mostSets = Math.max(...monthMuscles.map(item => item.sets))
+  const topMuscles = monthMuscles.filter(item => item.sets > 0 && item.sets === mostSets).map(item => item.category)
+  return { current: aggregate(current), previous: aggregate(previous), monthStart, previousStart, previousEnd, today, recentStart, muscles, timeline, highlight, topMuscles, workoutCount: groupWorkouts(current).length, newBests: timeline.filter(event => event.date >= monthStart && event.kind !== 'first').length }
 }

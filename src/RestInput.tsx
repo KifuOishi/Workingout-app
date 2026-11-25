@@ -4,7 +4,11 @@ export default function RestInput({ value, onChange, label }: { value: number; o
   const [draft, setDraft] = useState<string | null>(null)
   return <input type="number" min="0" max="3600" step="1" inputMode="numeric" aria-label={label}
     value={draft ?? value}
-    onFocus={() => setDraft(String(value))}
+    onFocus={event => {
+      setDraft(String(value))
+      event.currentTarget.select()
+    }}
+    onClick={event => event.currentTarget.select()}
     onChange={event => {
       const text = event.target.value
       setDraft(text)

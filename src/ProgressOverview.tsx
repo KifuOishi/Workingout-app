@@ -1,4 +1,5 @@
 import ProgressSection from './ProgressSection'
+import MonthlyTrainingCard from './MonthlyTrainingCard'
 import { useState } from 'react'
 import { categories } from './exercises'
 import type { Category, Exercise } from './exercises'
@@ -23,18 +24,18 @@ export default function ProgressOverview({ records, exercises, language, unit, t
   const [now] = useState(() => new Date())
   const data = trainingAnalytics(records, exercises, now)
   const [selected, setSelected] = useState<Category>(categories[0])
-  const [limit, setLimit] = useState(8)
   const muscle = data.muscles.find(item => item.category === selected)!
   const maximum = Math.max(1, ...data.muscles.map(item => item.sets))
   const num = (amount: number) => amount.toLocaleString(locales[language], { maximumFractionDigits: 2 })
   const date = (value: string) => new Date(value + 'T00:00:00').toLocaleDateString(locales[language], { month: 'short', day: 'numeric' })
+  const month = new Date(data.monthStart + 'T00:00:00').toLocaleDateString(locales[language], { year: 'numeric', month: 'long' })
   const color = (index: number) => {
     const count = data.muscles[index].sets
     return !count ? '#2a3a55' : count / maximum < .34 ? '#40516d' : count / maximum < .67 ? '#9cabc0' : '#d6bf89'
   }
   return <div className="progress-overview">
     <ProgressSection className="monthly-review" title={t('monthlyReview')}>
-      <time className="review-period" dateTime={data.monthStart.slice(0, 7)}>{new Date(data.monthStart + 'T00:00:00').toLocaleDateString(locales[language], { year: 'numeric', month: 'long' })}</time>
+      <time className="review-period" dateTime={data.monthStart.slice(0, 7)}>{month}</time>
       <p className="analytics-caption">{t('samePeriod')} · {date(data.previousStart)} – {date(data.previousEnd)}</p>
       <div className="review-metrics">{([
         ['days', t('trainingDays')], ['sets', t('sets')], ['volume', t('totalVolume')],
@@ -46,18 +47,17 @@ export default function ProgressOverview({ records, exercises, language, unit, t
       {data.highlight && <div className="month-highlight"><span aria-hidden="true">↗</span><div><small>{t('weightHighlight')}</small><p>{exerciseLabel(data.highlight.exercise, language)} <strong>+{num(fromKg(data.highlight.gain, unit))} {unit}</strong></p></div></div>}
       {!data.current.sets && <p className="analytics-caption">{t('reviewEmpty')}</p>}
     </ProgressSection>
-    <div className="analytics-sections">
-      <ProgressSection className="muscle-section" title={t('muscleMap')}><p className="analytics-caption">{t('muscleMapHint')}</p>
-        <div className="body-figures" aria-hidden="true">{[front, back].map((regions, view) => <div key={view}><svg viewBox="0 0 118 226" focusable="false"><circle cx="59" cy="23" r="14" fill="#2a3a55" /><path d="M51 38H67L70 48H48ZM38 106H79L73 115H44Z" fill="#2a3a55" />{regions.map((paths, index) => <g key={index} fill={color(index)} stroke={selected === categories[index] ? '#e9d5a0' : '#18253b'} strokeWidth={selected === categories[index] ? 2 : 1}>{paths.map(path => <path key={path} d={path} />)}</g>)}<path d="M41 213H52V220H36ZM65 213H76L82 220H65Z" fill="#2a3a55" /></svg><span>{t(view === 0 ? 'frontView' : 'backView')}</span></div>)}</div>
-        <div className="muscle-legend"><span>{t('fewerSets')}</span><i /><span>{t('moreSets')}</span></div>
-        <div className="muscle-categories">{data.muscles.map((item, index) => <button type="button" key={item.category} aria-pressed={selected === item.category} onClick={() => setSelected(item.category)}><i style={{ background: color(index) }} /><span>{categoryLabel(item.category, language)}</span><strong>{item.sets}</strong></button>)}</div>
-        <div className="muscle-detail" aria-live="polite"><strong>{categoryLabel(selected, language)} · {muscle.sets} {t('sets')}</strong><p>{muscle.lastDate ? `${t('lastTrained')}: ${date(muscle.lastDate)}` : t('noRecentSets')}</p></div>
-        <p className="analytics-footnote">{t('analyticsMethod')}</p>
-      </ProgressSection>
-      <ProgressSection className="milestone-section" title={t('bestTimeline')}><p className="analytics-caption">{t('bestTimelineHint')}</p>
-        {!data.timeline.length ? <p className="analytics-empty">{t('timelineEmpty')}</p> : <ol className="milestone-list">{data.timeline.slice(0, limit).map(event => <li key={event.id} data-kind={event.kind}><span className="milestone-symbol" aria-hidden="true">{event.kind === 'first' ? '⚑' : event.kind === 'weight' ? '↗' : '+'}</span><div><div className="milestone-meta"><span>{t(event.kind === 'first' ? 'firstMilestone' : event.kind === 'weight' ? 'weightMilestone' : 'repsMilestone')}</span><time dateTime={event.date}>{date(event.date)}</time></div><h3>{exerciseLabel(event.exercise, language)}</h3><p>{num(fromKg(event.weight, unit))} {unit} × {event.reps}{event.kind !== 'first' && <strong>+{num(event.kind === 'weight' ? fromKg(event.gain, unit) : event.gain)} {event.kind === 'weight' ? unit : t('reps')}</strong>}</p></div></li>)}</ol>}
-        {data.timeline.length > limit && <button className="secondary milestone-more" onClick={() => setLimit(limit + 8)}>{t('showMore')}</button>}
-      </ProgressSection>
-    </div>
+    <ProgressSection className="muscle-section" title={t('muscleMap')}><p className="analytics-caption">{t('muscleMapHint')}</p>
+      <div className="body-figures" aria-hidden="true">{[front, back].map((regions, view) => <div key={view}><svg viewBox="0 0 118 226" focusable="false"><circle cx="59" cy="23" r="14" fill="#2a3a55" /><path d="M51 38H67L70 48H48ZM38 106H79L73 115H44Z" fill="#2a3a55" />{regions.map((paths, index) => <g key={index} fill={color(index)} stroke={selected === categories[index] ? '#e9d5a0' : '#18253b'} strokeWidth={selected === categories[index] ? 2 : 1}>{paths.map(path => <path key={path} d={path} />)}</g>)}<path d="M41 213H52V220H36ZM65 213H76L82 220H65Z" fill="#2a3a55" /></svg><span>{t(view === 0 ? 'frontView' : 'backView')}</span></div>)}</div>
+      <div className="muscle-legend"><span>{t('fewerSets')}</span><i /><span>{t('moreSets')}</span></div>
+      <div className="muscle-categories">{data.muscles.map((item, index) => <button type="button" key={item.category} aria-pressed={selected === item.category} onClick={() => setSelected(item.category)}><i style={{ background: color(index) }} /><span>{categoryLabel(item.category, language)}</span><strong>{item.sets}</strong></button>)}</div>
+      <div className="muscle-detail" aria-live="polite"><strong>{categoryLabel(selected, language)} · {muscle.sets} {t('sets')}</strong><p>{muscle.lastDate ? `${t('lastTrained')}: ${date(muscle.lastDate)}` : t('noRecentSets')}</p></div>
+      <p className="analytics-footnote">{t('analyticsMethod')}</p>
+    </ProgressSection>
+    <MonthlyTrainingCard month={month} monthKey={data.monthStart.slice(0, 7)} t={t} metrics={[
+      { label: t('monthlyWorkoutCount'), value: num(data.workoutCount) },
+      { label: t('bestUpdates'), value: num(data.newBests) },
+      { label: t('topMuscle'), value: data.topMuscles.map(category => categoryLabel(category, language)).join(' / ') || '—' },
+    ]} />
   </div>
 }

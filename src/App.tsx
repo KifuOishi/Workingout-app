@@ -9,6 +9,7 @@ import './theme.css'
 import Icon from './Icon'
 import WorkoutCalendar from './WorkoutCalendar'
 import WorkoutSummary from './WorkoutSummary'
+import type { SetImprovement } from './progress'
 import WorkoutHistory from './WorkoutHistory'
 import { exerciseLabel } from './exerciseLabels'
 import type { WorkoutRecord } from './workouts'
@@ -46,6 +47,7 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
   const [hasSession, setHasSession] = useState(false)
   const [showRecordForm, setShowRecordForm] = useState(false)
   const [summary, setSummary] = useState<WorkoutRecord[] | null>(null)
+  const [summaryImprovements, setSummaryImprovements] = useState(new Map<string, SetImprovement[]>())
   const [filter, setFilter] = useState(readHistoryDate)
   function navigate(next: Page, selectedDate?: string) {
     const hash = '#/' + next + (next === 'history' && selectedDate ? '?date=' + selectedDate : '')
@@ -138,8 +140,15 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
         {catalogInitial.error && <div role="alert" className="error">{t('catalogError')}</div>}
         {error && <div role="alert" className="error">{t(error)}</div>}
         {notice && <p role="status" className="notice">{t(notice)}</p>}
-        <WorkoutPlanner ref={planner} page={page} navigate={navigate} onActiveChange={setHasSession} onAddExercise={addExercise} language={language} unit={unit} t={t} exercises={catalog} records={records} onFinish={items => { const saved = save([...records, ...items.filter(item => !records.some(record => record.id === item.id))], 'workoutSaved'); if (saved) setSummary(items.map(item => records.find(record => record.id === item.id) ?? item)); return saved }} />
-        {page === 'history' && <>{summary && <WorkoutSummary records={summary} language={language} unit={unit} t={t} onClose={() => setSummary(null)} onReflectionChange={reflection => {
+        <WorkoutPlanner ref={planner} page={page} navigate={navigate} onActiveChange={setHasSession} onAddExercise={addExercise} language={language} unit={unit} t={t} exercises={catalog} records={records} onFinish={(items, improvements) => {
+          const saved = save([...records, ...items.filter(item => !records.some(record => record.id === item.id))], 'workoutSaved')
+          if (saved) {
+            setSummary(items.map(item => records.find(record => record.id === item.id) ?? item))
+            setSummaryImprovements(improvements)
+          }
+          return saved
+        }} />
+        {page === 'history' && <>{summary && <WorkoutSummary records={summary} improvements={summaryImprovements} language={language} unit={unit} t={t} onClose={() => setSummary(null)} onReflectionChange={reflection => {
           const ids = new Set(summary.map(record => record.id))
           const next = records.map(record => ids.has(record.id) ? { ...record, ...reflection } : record)
           if (save(next, 'updated')) setSummary(next.filter(record => ids.has(record.id)))
@@ -181,7 +190,7 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
                     if (editing && ids.has(editing)) { setEditing(null); setNote('') }
                     if (summary?.some(item => ids.has(item.id))) setSummary(null)
                   }
-                }} records={rows} language={language} unit={unit} t={t} exercises={catalog} onTemplate={items => planner.current?.template(items)} onRepeat={items => planner.current?.repeat(items)} onEdit={edit} deleting={deleting} setDeleting={setDeleting} onDelete={record => { if (save(records.filter(item => item.id !== record.id), 'deleted')) { setDeleting(null); if (editing === record.id) { setEditing(null); setNote('') } if (summary?.some(item => item.id === record.id)) setSummary(null) }}} onSummary={items => setSummary(items)} />
+                }} records={rows} language={language} unit={unit} t={t} exercises={catalog} onTemplate={items => planner.current?.template(items)} onRepeat={items => planner.current?.repeat(items)} onEdit={edit} deleting={deleting} setDeleting={setDeleting} onDelete={record => { if (save(records.filter(item => item.id !== record.id), 'deleted')) { setDeleting(null); if (editing === record.id) { setEditing(null); setNote('') } if (summary?.some(item => item.id === record.id)) setSummary(null) }}} onSummary={items => { setSummary(items); setSummaryImprovements(new Map()) }} />
               </section>
             })}
           </section>

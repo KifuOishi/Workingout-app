@@ -1,6 +1,7 @@
 import useNotice from './useNotice'
 import { isAssisted, signedWeight } from './exercises'
 import TrainingProgress from './TrainingProgress'
+import NewYearHighlights from './TrainingHighlights'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
@@ -124,6 +125,7 @@ function AppContent({ onRestored, restored }: { onRestored: () => void; restored
       <header><a className="brand" href="#"><span className="brand-icon"><Icon name="workout" /></span> LIFT LOG</a><button className="secondary backup-trigger" onClick={() => setBackupOpen(true)}>{t('backup')}</button></header>
       <nav className="page-nav" aria-label={t('journal')}>{pages.map(item => <a key={item} href={'#/' + item} onClick={event => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(item) } }} aria-current={page === item ? 'page' : undefined}><Icon name={item} /><span>{t(item === 'templates' ? 'templatesNav' : item === 'history' ? 'historyNav' : item === 'calendar' ? 'calendarNav' : item)}</span></a>)}</nav>
       <main>
+        <NewYearHighlights records={records} language={language} t={t} home={page === 'home'} />
         {page === 'home' && <div className="home-layout"><div className="home-main">
         <div className="intro"><span className="eyebrow">{t('journal')}</span><h1>{t('title')}</h1><p>{t('subtitle')}</p></div>
         <div className="home-start panel"><div className="home-art" aria-hidden="true"><div className="art-orbit" /><div className="art-orbit art-orbit-inner" /><Icon name="workout" /><span className="art-dot" /></div><div className="home-start-copy"><span className="eyebrow">LIFT LOG / TODAY</span><h2>{t('noActiveWorkout')}</h2><p>{t('emptyHint')}</p></div><div className="planner-actions">{hasSession ? <button className="primary" onClick={() => navigate('workout')}>{t('continueWorkout')}<Icon name="arrow" /></button> : <button className="primary" onClick={() => planner.current?.empty()}>{t('startEmpty')}<Icon name="arrow" /></button>}<button className="secondary" onClick={() => navigate('templates')}><Icon name="templates" />{t('fromTemplate')}<Icon name="arrow" /></button><button className="text-button" onClick={() => navigate('history')}>{t('history')}</button></div></div>

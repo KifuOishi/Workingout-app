@@ -1,12 +1,13 @@
 import ProgressSection from './ProgressSection'
 import MonthlyTrainingCard from './MonthlyTrainingCard'
-import { useState } from 'react'
+import AnnualTrainingReport from './AnnualTrainingReport'
+import { useEffect, useState } from 'react'
 import { categories } from './exercises'
 import type { Category, Exercise } from './exercises'
 import { categoryLabel, exerciseLabel } from './exerciseLabels'
 import { fromKg, locales } from './i18n'
 import type { Language, Translate, Unit } from './i18n'
-import { trainingAnalytics } from './analytics'
+import { dateKey, trainingAnalytics } from './analytics'
 import type { WorkoutRecord } from './workouts'
 
 // Broad regions match the app's exercise categories rather than inferred muscles.
@@ -21,7 +22,19 @@ const front = [
 const back = [[], front[1], ['M43 49L57 45 74 49 77 69 69 94 59 106 48 94 39 69Z'], front[3], front[4], []]
 
 export default function ProgressOverview({ records, exercises, language, unit, t }: { records: WorkoutRecord[]; exercises: Exercise[]; language: Language; unit: Unit; t: Translate }) {
-  const [now] = useState(() => new Date())
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    function refreshDate() {
+      const date = new Date()
+      setNow(previous => dateKey(previous) === dateKey(date) ? previous : date)
+    }
+    const interval = window.setInterval(refreshDate, 60_000)
+    document.addEventListener('visibilitychange', refreshDate)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshDate)
+    }
+  }, [])
   const data = trainingAnalytics(records, exercises, now)
   const [selected, setSelected] = useState<Category>(categories[0])
   const muscle = data.muscles.find(item => item.category === selected)!
@@ -29,6 +42,8 @@ export default function ProgressOverview({ records, exercises, language, unit, t
   const num = (amount: number) => amount.toLocaleString(locales[language], { maximumFractionDigits: 2 })
   const date = (value: string) => new Date(value + 'T00:00:00').toLocaleDateString(locales[language], { month: 'short', day: 'numeric' })
   const month = new Date(data.monthStart + 'T00:00:00').toLocaleDateString(locales[language], { year: 'numeric', month: 'long' })
+  const workoutCount = num(data.workoutCount)
+  const topMuscle = data.topMuscles.map(category => categoryLabel(category, language)).join(' / ') || '—'
   const color = (index: number) => {
     const count = data.muscles[index].sets
     return !count ? '#2a3a55' : count / maximum < .34 ? '#40516d' : count / maximum < .67 ? '#9cabc0' : '#d6bf89'
@@ -43,9 +58,17 @@ export default function ProgressOverview({ records, exercises, language, unit, t
         const amount = metric === 'volume' ? fromKg(data.current[metric], unit) : data.current[metric]
         const change = metric === 'volume' ? fromKg(data.current[metric] - data.previous[metric], unit) : data.current[metric] - data.previous[metric]
         return <div key={metric} data-metric={metric}><span>{label}</span><strong>{num(amount)}{metric === 'volume' && <small> {unit}</small>}</strong><span className="review-delta" data-direction={change > 0 ? 'up' : change < 0 ? 'down' : 'same'}>{change > 0 ? '↗ +' : change < 0 ? '↘ ' : '— '}{num(change)}{metric === 'volume' ? ' ' + unit : ''}</span></div>
-      })}<div data-metric="bests"><span>{t('bestUpdates')}</span><strong>{data.newBests}</strong><span className="review-delta">{date(data.monthStart)} – {date(data.today)}</span></div></div>
+      })}<div data-metric="bests"><span>{t('bestUpdates')}</span><strong>{num(data.newBests)}</strong><span className="review-delta">{date(data.monthStart)} – {date(data.today)}</span></div>
+        <div data-metric="workouts"><span>{t('monthlyWorkoutCount')}</span><strong>{workoutCount}</strong></div>
+        <div data-metric="top-muscle"><span>{t('topMuscle')}</span><strong>{topMuscle}</strong></div>
+      </div>
       {data.highlight && <div className="month-highlight"><span aria-hidden="true">↗</span><div><small>{t('weightHighlight')}</small><p>{exerciseLabel(data.highlight.exercise, language)} <strong>+{num(fromKg(data.highlight.gain, unit))} {unit}</strong></p></div></div>}
       {!data.current.sets && <p className="analytics-caption">{t('reviewEmpty')}</p>}
+      <MonthlyTrainingCard month={month} monthKey={data.monthStart.slice(0, 7)} t={t} metrics={[
+        { label: t('monthlyWorkoutCount'), value: workoutCount },
+        { label: t('bestUpdates'), value: num(data.newBests) },
+        { label: t('topMuscle'), value: topMuscle },
+      ]} />
     </ProgressSection>
     <ProgressSection className="muscle-section" title={t('muscleMap')}><p className="analytics-caption">{t('muscleMapHint')}</p>
       <div className="body-figures" aria-hidden="true">{[front, back].map((regions, view) => <div key={view}><svg viewBox="0 0 118 226" focusable="false"><circle cx="59" cy="23" r="14" fill="#2a3a55" /><path d="M51 38H67L70 48H48ZM38 106H79L73 115H44Z" fill="#2a3a55" />{regions.map((paths, index) => <g key={index} fill={color(index)} stroke={selected === categories[index] ? '#e9d5a0' : '#18253b'} strokeWidth={selected === categories[index] ? 2 : 1}>{paths.map(path => <path key={path} d={path} />)}</g>)}<path d="M41 213H52V220H36ZM65 213H76L82 220H65Z" fill="#2a3a55" /></svg><span>{t(view === 0 ? 'frontView' : 'backView')}</span></div>)}</div>
@@ -54,10 +77,6 @@ export default function ProgressOverview({ records, exercises, language, unit, t
       <div className="muscle-detail" aria-live="polite"><strong>{categoryLabel(selected, language)} · {muscle.sets} {t('sets')}</strong><p>{muscle.lastDate ? `${t('lastTrained')}: ${date(muscle.lastDate)}` : t('noRecentSets')}</p></div>
       <p className="analytics-footnote">{t('analyticsMethod')}</p>
     </ProgressSection>
-    <MonthlyTrainingCard month={month} monthKey={data.monthStart.slice(0, 7)} t={t} metrics={[
-      { label: t('monthlyWorkoutCount'), value: num(data.workoutCount) },
-      { label: t('bestUpdates'), value: num(data.newBests) },
-      { label: t('topMuscle'), value: data.topMuscles.map(category => categoryLabel(category, language)).join(' / ') || '—' },
-    ]} />
+    <AnnualTrainingReport records={records} timeline={data.timeline} now={now} language={language} t={t} />
   </div>
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { Translate } from './i18n'
-import ProgressSection from './ProgressSection'
 
 export default function MonthlyTrainingCard({ month, monthKey, metrics, t }: { month: string; monthKey: string; metrics: { label: string; value: string }[]; t: Translate }) {
   const [exportFailed, setExportFailed] = useState(false)
@@ -48,12 +47,8 @@ export default function MonthlyTrainingCard({ month, monthKey, metrics, t }: { m
     }, 'image/png')
   }
 
-  return <ProgressSection className="monthly-card-section" title={t('monthlyCard')}>
-    <div className="monthly-card-preview">
-      <time dateTime={monthKey}>{month}</time>
-      <dl>{metrics.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-    </div>
+  return <div className="monthly-card-export">
     <button type="button" className="primary" onClick={saveImage}>{t('saveCardImage')}</button>
     {exportFailed && <p className="error" role="alert">{t('cardExportFailed')}</p>}
-  </ProgressSection>
+  </div>
 }

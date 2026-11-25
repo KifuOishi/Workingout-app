@@ -7,6 +7,47 @@ import type { WorkoutRecord } from './workouts'
 export const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 export type Milestone = { id: string; date: string; exercise: string; kind: 'first' | 'weight' | 'reps'; weight: number; reps: number; gain: number }
 
+export function annualTrainingStats(records: WorkoutRecord[], timeline: Milestone[], year: string, now: Date) {
+  const today = dateKey(now)
+  const rows = records.filter(record => record.date <= today && record.date.startsWith(`${year}-`))
+  const workouts = groupWorkouts(rows)
+  const months = Array.from({ length: year === today.slice(0, 4) ? now.getMonth() + 1 : 12 }, () => 0)
+  for (const { records: [first] } of workouts) months[Number(first.date.slice(5, 7)) - 1]++
+  const setsByExercise = new Map<string, number>()
+  for (const row of rows) {
+    const sets = workingSets(row).length
+    if (sets) setsByExercise.set(row.exercise, (setsByExercise.get(row.exercise) ?? 0) + sets)
+  }
+  const trainingDates = new Set(rows.map(row => row.date))
+  const dayMs = 86_400_000
+  const weeks = [...new Set([...trainingDates].map(date => {
+    const day = new Date(`${date}T00:00:00Z`)
+    return day.getTime() / dayMs - (day.getUTCDay() + 6) % 7
+  }))].sort((a, b) => a - b)
+  let streak = 0
+  let longestStreak = 0
+  for (const [index, week] of weeks.entries()) {
+    streak = index > 0 && week - weeks[index - 1] === 7 ? streak + 1 : 1
+    longestStreak = Math.max(longestStreak, streak)
+  }
+  const topSets = Math.max(0, ...setsByExercise.values())
+  const topExercises = [...setsByExercise].filter(([, sets]) => sets === topSets).map(([exercise]) => exercise)
+  return {
+    workouts: workouts.length,
+    days: trainingDates.size,
+    totalSets: [...setsByExercise.values()].reduce((total, sets) => total + sets, 0),
+    longestStreak,
+    bestUpdates: timeline.filter(event => event.kind !== 'first' && event.date.startsWith(`${year}-`)).length,
+    months, topSets, topExercises,
+  }
+}
+
+export const demoStats: ReturnType<typeof annualTrainingStats> = {
+  workouts: 96, days: 90, bestUpdates: 24, totalSets: 864, longestStreak: 12,
+  months: [6, 7, 8, 7, 9, 8, 7, 11, 9, 8, 9, 7],
+  topSets: 108, topExercises: ['ベンチプレス'],
+}
+
 export function milestones(records: WorkoutRecord[], today: string): Milestone[] {
   const history = new Map<string, { max: number; reps: Map<number, number> }>()
   const events: Milestone[] = []
